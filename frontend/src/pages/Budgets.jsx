@@ -1,29 +1,37 @@
 import React, { useState, useEffect } from 'react';
 import budgetService from '../services/budgetService';
 import transactionService from '../services/transactionService';
-import { Target, Wallet, TrendingUp, Edit3, Plus, Calendar } from 'lucide-react';
+import { Target, Wallet, TrendingUp, Edit3, Plus, Calendar, Trash2 } from 'lucide-react';
 
 const Budgets = () => {
     const [budgets, setBudgets] = useState([]);
     const [transactions, setTransactions] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+    const [isEditingOverride, setIsEditingOverride] = useState(false);
     const [formData, setFormData] = useState({
         category: 'Food',
-        amount: '',
-        month: new Date().getMonth() + 1,
-        year: new Date().getFullYear()
+        amount: ''
     });
+
+    const months = [
+        { value: 1, label: 'January' }, { value: 2, label: 'February' }, { value: 3, label: 'March' },
+        { value: 4, label: 'April' }, { value: 5, label: 'May' }, { value: 6, label: 'June' },
+        { value: 7, label: 'July' }, { value: 8, label: 'August' }, { value: 9, label: 'September' },
+        { value: 10, label: 'October' }, { value: 11, label: 'November' }, { value: 12, label: 'December' }
+    ];
 
     const categories = ['Food', 'Transport', 'Entertainment', 'Shopping', 'Utilities', 'Rent', 'Health', 'General'];
 
     useEffect(() => {
         fetchData();
-    }, []);
+    }, [selectedMonth, selectedYear]);
 
     const fetchData = async () => {
         try {
             const [budgetRes, transRes] = await Promise.all([
-                budgetService.getAllBudgets(),
+                budgetService.getAllBudgets(selectedMonth, selectedYear),
                 transactionService.getAllTransactions()
             ]);
             setBudgets(budgetRes.data);
@@ -38,22 +46,57 @@ const Budgets = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            await budgetService.setBudget(formData);
+            if (isEditingOverride) {
+                await budgetService.setBudget({
+                    ...formData,
+                    month: selectedMonth,
+                    year: selectedYear
+                });
+            } else {
+                await budgetService.setDefaultBudget({
+                    ...formData
+                });
+            }
             fetchData();
-            setFormData({ ...formData, amount: '' });
+            setFormData({ category: 'Food', amount: '' });
+            setIsEditingOverride(false);
         } catch (err) {
             console.error(err);
         }
     };
 
-    const calculateSpent = (category, month, year) => {
+    const handleEdit = (budget) => {
+        setFormData({
+            category: budget.category,
+            amount: budget.amount
+        });
+        setIsEditingOverride(true);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const handleCancelEdit = () => {
+        setFormData({ category: 'Food', amount: '' });
+        setIsEditingOverride(false);
+    };
+
+    const handleDelete = async (id) => {
+        if (!window.confirm("Are you sure you want to delete this specific month override and revert to default?")) return;
+        try {
+            await budgetService.deleteBudget(id);
+            fetchData();
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    const calculateSpent = (category) => {
         return transactions
             .filter(t => {
                 const d = new Date(t.transactionDate);
                 return t.type === 'EXPENSE' &&
                     t.category === category &&
-                    (d.getMonth() + 1) === Number(month) &&
-                    d.getFullYear() === Number(year);
+                    (d.getMonth() + 1) === selectedMonth &&
+                    d.getFullYear() === selectedYear;
             })
             .reduce((sum, t) => sum + Number(t.amount), 0);
     };
@@ -65,21 +108,41 @@ const Budgets = () => {
                     <h1 className="text-4xl font-black text-white tracking-tight">Budgets</h1>
                     <p className="text-slate-400 mt-2 font-medium">Set monthly limits and track your discipline.</p>
                 </div>
-                <div className="hidden md:flex items-center gap-3 glass px-4 py-2 rounded-2xl border-white/5">
-                    <Calendar className="w-4 h-4 text-sky-500" />
-                    <span className="text-white font-bold text-sm">
-                        {new Date().toLocaleString('default', { month: 'long', year: 'numeric' })}
-                    </span>
+                <div className="flex flex-col sm:flex-row items-end sm:items-center gap-4">
+                    <div className="flex items-center gap-3 glass px-4 py-2 rounded-2xl border-white/5">
+                        <Calendar className="w-4 h-4 text-sky-500" />
+                        <select 
+                            className="bg-transparent text-white font-bold text-sm focus:outline-none cursor-pointer appearance-none"
+                            value={selectedMonth}
+                            onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                        >
+                            {months.map(m => <option key={m.value} value={m.value} className="bg-slate-900">{m.label}</option>)}
+                        </select>
+                        <span className="text-white/30 font-bold mx-1">/</span>
+                        <input 
+                            type="number" 
+                            className="bg-transparent text-white font-bold text-sm focus:outline-none w-16"
+                            value={selectedYear}
+                            onChange={(e) => setSelectedYear(Number(e.target.value))}
+                        />
+                    </div>
                 </div>
             </header>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="card h-fit sticky top-8">
+                <div className="card h-fit sticky top-8 border-t-4 border-t-sky-500">
                     <div className="flex items-center gap-3 mb-8">
-                        <div className="p-2 bg-sky-500/10 rounded-xl">
-                            <Plus className="w-5 h-5 text-sky-500" />
+                        <div className={`p-2 rounded-xl ${isEditingOverride ? 'bg-amber-500/10' : 'bg-sky-500/10'}`}>
+                            {isEditingOverride ? <Edit3 className="w-5 h-5 text-amber-500" /> : <Plus className="w-5 h-5 text-sky-500" />}
                         </div>
-                        <h2 className="text-xl font-bold text-white">New Target</h2>
+                        <div>
+                            <h2 className="text-xl font-bold text-white">
+                                {isEditingOverride ? 'Edit Monthly Override' : 'New Default Target'}
+                            </h2>
+                            <p className="text-[10px] text-slate-400 mt-1 uppercase font-bold tracking-widest">
+                                {isEditingOverride ? `Only applies to ${months.find(m => m.value === selectedMonth)?.label}` : 'Applies to all months globally'}
+                            </p>
+                        </div>
                     </div>
                     <form onSubmit={handleSubmit} className="space-y-6">
                         <div>
@@ -106,51 +169,55 @@ const Budgets = () => {
                                 />
                             </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-[10px] uppercase tracking-widest font-black text-slate-500 mb-2">Month</label>
-                                <input
-                                    type="number"
-                                    min="1" max="12"
-                                    className="w-full bg-slate-900/50 border border-white/10 rounded-xl py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-sky-500/50"
-                                    value={formData.month}
-                                    onChange={(e) => setFormData({ ...formData, month: e.target.value })}
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-[10px] uppercase tracking-widest font-black text-slate-500 mb-2">Year</label>
-                                <input
-                                    type="number"
-                                    className="w-full bg-slate-900/50 border border-white/10 rounded-xl py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-sky-500/50"
-                                    value={formData.year}
-                                    onChange={(e) => setFormData({ ...formData, year: e.target.value })}
-                                />
-                            </div>
+                        <div className="flex gap-3">
+                            {isEditingOverride && (
+                                <button type="button" onClick={handleCancelEdit} className="px-6 py-4 rounded-xl font-bold text-slate-400 bg-slate-800 hover:bg-slate-700 hover:text-white transition-colors">
+                                    Cancel
+                                </button>
+                            )}
+                            <button type="submit" className={`flex-1 py-4 font-bold rounded-xl text-white shadow-lg transition-all ${isEditingOverride ? 'bg-gradient-to-r from-amber-500 to-orange-600 hover:shadow-amber-500/25' : 'bg-gradient-to-r from-sky-500 to-indigo-600 hover:shadow-sky-500/25'}`}>
+                                {isEditingOverride ? 'Save Override Limit' : 'Save Default Limit'}
+                            </button>
                         </div>
-                        <button type="submit" className="btn-primary w-full py-4 shadow-sky-500/20">
-                            Save Budget Target
-                        </button>
                     </form>
                 </div>
 
                 <div className="lg:col-span-2 space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {budgets.map(b => {
-                            const spent = calculateSpent(b.category, b.month, b.year);
+                            const spent = calculateSpent(b.category);
                             const percent = Math.min(Math.round((spent / b.amount) * 100), 100);
                             const isOver = spent > b.amount;
 
                             return (
-                                <div key={b.id} className="card group hover:border-sky-500/30 transition-all">
+                                <div key={b.category + '-' + b.id} className="card group hover:border-sky-500/30 transition-all">
                                     <div className="flex justify-between items-start mb-6">
                                         <div>
-                                            <h3 className="text-xl font-bold text-white group-hover:text-sky-400 transition-colors">{b.category}</h3>
-                                            <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-1">
-                                                {new Date(b.year, b.month - 1).toLocaleString('default', { month: 'long', year: 'numeric' })}
-                                            </p>
+                                            <div className="flex items-center gap-2">
+                                                <h3 className="text-xl font-bold text-white group-hover:text-sky-400 transition-colors">{b.category}</h3>
+                                                {b.id && <span className="text-[10px] bg-sky-500/20 text-sky-400 uppercase tracking-widest px-2 py-0.5 rounded flex-shrink-0">Override</span>}
+                                            </div>
                                         </div>
-                                        <div className={`p-2 rounded-xl ${isOver ? 'bg-rose-500/10 text-rose-500' : 'bg-sky-500/10 text-sky-500'}`}>
-                                            <Target className="w-5 h-5" />
+                                        <div className="flex items-center gap-2">
+                                            {b.id && (
+                                                <button 
+                                                    onClick={() => handleDelete(b.id)}
+                                                    className="p-2 bg-slate-800 hover:bg-rose-500/20 text-slate-300 hover:text-rose-500 rounded-xl transition-colors cursor-pointer"
+                                                    title="Delete Override"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            )}
+                                            <button 
+                                                onClick={() => handleEdit(b)}
+                                                className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl transition-colors cursor-pointer"
+                                                title="Edit Budget"
+                                            >
+                                                <Edit3 className="w-4 h-4" />
+                                            </button>
+                                            <div className={`p-2 rounded-xl ${isOver ? 'bg-rose-500/10 text-rose-500' : 'bg-sky-500/10 text-sky-500'}`}>
+                                                <Target className="w-5 h-5" />
+                                            </div>
                                         </div>
                                     </div>
 

@@ -15,8 +15,16 @@ import com.smartai.budgettracker.dto.JwtResponse;
 import com.smartai.budgettracker.dto.LoginRequest;
 import com.smartai.budgettracker.dto.MessageResponse;
 import com.smartai.budgettracker.dto.SignupRequest;
+import com.smartai.budgettracker.dto.ProfileSetupRequest;
 import com.smartai.budgettracker.entity.User;
+import com.smartai.budgettracker.entity.DefaultBudget;
+import com.smartai.budgettracker.dto.DefaultBudgetDTO;
 import com.smartai.budgettracker.repository.UserRepository;
+import com.smartai.budgettracker.repository.BudgetRepository;
+import com.smartai.budgettracker.repository.DefaultBudgetRepository;
+import com.smartai.budgettracker.repository.TransactionRepository;
+import com.smartai.budgettracker.entity.Transaction;
+import java.time.LocalDate;
 import com.smartai.budgettracker.security.JwtUtils;
 import com.smartai.budgettracker.security.UserDetailsImpl;
 
@@ -29,6 +37,15 @@ public class AuthController {
 
   @Autowired
   UserRepository userRepository;
+
+  @Autowired
+  BudgetRepository budgetRepository;
+
+  @Autowired
+  DefaultBudgetRepository defaultBudgetRepository;
+
+  @Autowired
+  TransactionRepository transactionRepository;
 
   @Autowired
   PasswordEncoder encoder;
@@ -54,6 +71,8 @@ public class AuthController {
                          userDetails.getId(), 
                          userDetails.getUsername(), 
                          userDetails.getEmail(), 
+                         userDetails.getProfileSetup(),
+                         userDetails.getMonthlySalary(),
                          roles));
   }
 
@@ -79,5 +98,43 @@ public class AuthController {
     userRepository.save(user);
 
     return ResponseEntity.ok(new MessageResponse("User registered successfully!"));
+  }
+
+  @PostMapping("/profile-setup")
+  public ResponseEntity<?> setupProfile(@Valid @RequestBody ProfileSetupRequest request) {
+    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+    
+    User user = userRepository.findById(userDetails.getId()).orElse(null);
+    if (user == null) {
+      return ResponseEntity.badRequest().body(new MessageResponse("Error: User not found!"));
+    }
+    
+    user.setMonthlySalary(request.getMonthlySalary());
+    user.setProfileSetup(true);
+    userRepository.save(user);
+    
+    if (request.getDefaultBudgets() != null) {
+        for (DefaultBudgetDTO dto : request.getDefaultBudgets()) {
+            DefaultBudget db = new DefaultBudget();
+            db.setUser(user);
+            db.setCategory(dto.getCategory());
+            db.setAmount(dto.getAmount());
+            defaultBudgetRepository.save(db);
+        }
+    }
+
+    if (request.getMonthlySalary() != null) {
+        Transaction salaryTx = new Transaction();
+        salaryTx.setUser(user);
+        salaryTx.setCategory("Salary");
+        salaryTx.setAmount(request.getMonthlySalary());
+        salaryTx.setDescription("Initial Monthly Salary Setup");
+        salaryTx.setTransactionDate(LocalDate.now());
+        salaryTx.setType(Transaction.TransactionType.INCOME);
+        transactionRepository.save(salaryTx);
+    }
+    
+    return ResponseEntity.ok(new MessageResponse("Profile setup successfully!"));
   }
 }

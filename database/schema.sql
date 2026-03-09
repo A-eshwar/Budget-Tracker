@@ -9,6 +9,8 @@ CREATE TABLE IF NOT EXISTS users (
     password VARCHAR(255) NOT NULL,
     email VARCHAR(100) NOT NULL UNIQUE,
     role ENUM('USER', 'ADMIN') DEFAULT 'USER',
+    profile_setup BOOLEAN DEFAULT FALSE,
+    monthly_salary DECIMAL(15, 2),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
@@ -27,7 +29,7 @@ CREATE TABLE IF NOT EXISTS transactions (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- Budgets Table
+-- Budgets Table (Overrides/Specific Month)
 CREATE TABLE IF NOT EXISTS budgets (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     user_id BIGINT NOT NULL,
@@ -37,6 +39,17 @@ CREATE TABLE IF NOT EXISTS budgets (
     year INT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY unique_budget (user_id, category, month, year),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Default Budgets Table (Base monthly target per category)
+CREATE TABLE IF NOT EXISTS default_budgets (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    category VARCHAR(50) NOT NULL,
+    amount DECIMAL(15, 2) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_default_budget (user_id, category),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 

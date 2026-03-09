@@ -1,6 +1,7 @@
 package com.smartai.budgettracker.entity;
 
 import jakarta.persistence.*;
+import java.math.BigDecimal;
 import java.util.Set;
 
 @Entity
@@ -16,10 +17,15 @@ public class User {
     @Column(nullable = false, unique = true)
     private String email;
 
-    @Column(nullable = false)
     private String password;
 
     private String role = "ROLE_USER";
+
+    @Column(name = "profile_setup")
+    private Boolean profileSetup = false;
+
+    @Column(name = "monthly_salary")
+    private BigDecimal monthlySalary;
 
     public User() {}
 
@@ -39,4 +45,8 @@ public class User {
     public void setPassword(String password) { this.password = password; }
     public String getRole() { return role; }
     public void setRole(String role) { this.role = role; }
+    public Boolean getProfileSetup() { return profileSetup; }
+    public void setProfileSetup(Boolean profileSetup) { this.profileSetup = profileSetup; }
+    public BigDecimal getMonthlySalary() { return monthlySalary; }
+    public void setMonthlySalary(BigDecimal monthlySalary) { this.monthlySalary = monthlySalary; }
 }

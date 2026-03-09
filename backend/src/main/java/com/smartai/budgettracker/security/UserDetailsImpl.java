@@ -9,6 +9,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.smartai.budgettracker.entity.User;
+import java.math.BigDecimal;
 import java.util.Collections;
 
 public class UserDetailsImpl implements UserDetails {
@@ -17,6 +18,8 @@ public class UserDetailsImpl implements UserDetails {
   private Long id;
   private String username;
   private String email;
+  private Boolean profileSetup;
+  private BigDecimal monthlySalary;
 
   @JsonIgnore
   private String password;
@@ -24,11 +27,14 @@ public class UserDetailsImpl implements UserDetails {
   private Collection<? extends GrantedAuthority> authorities;
 
   public UserDetailsImpl(Long id, String username, String email, String password,
+      Boolean profileSetup, BigDecimal monthlySalary,
       Collection<? extends GrantedAuthority> authorities) {
     this.id = id;
     this.username = username;
     this.email = email;
     this.password = password;
+    this.profileSetup = profileSetup;
+    this.monthlySalary = monthlySalary;
     this.authorities = authorities;
   }
 
@@ -40,6 +46,8 @@ public class UserDetailsImpl implements UserDetails {
         user.getUsername(), 
         user.getEmail(),
         user.getPassword(), 
+        user.getProfileSetup(),
+        user.getMonthlySalary(),
         authorities);
   }
 
@@ -54,6 +62,14 @@ public class UserDetailsImpl implements UserDetails {
 
   public String getEmail() {
     return email;
+  }
+
+  public Boolean getProfileSetup() {
+    return profileSetup;
+  }
+
+  public BigDecimal getMonthlySalary() {
+    return monthlySalary;
   }
 
   @Override

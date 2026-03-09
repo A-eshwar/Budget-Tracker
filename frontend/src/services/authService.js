@@ -12,6 +12,11 @@ const register = (username, email, password) => {
     return api.post('/auth/signup', { username, email, password });
 };
 
+const setupProfile = async (data) => {
+    const response = await api.post('/auth/profile-setup', data);
+    return response.data;
+};
+
 const logout = () => {
     localStorage.removeItem('user');
 };
@@ -24,7 +29,8 @@ const authService = {
     login,
     register,
     logout,
-    getCurrentUser
+    getCurrentUser,
+    setupProfile
 };
 
 export default authService;
