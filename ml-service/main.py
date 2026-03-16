@@ -47,6 +47,7 @@ class AnomalyRequest(BaseModel):
 class HealthRequest(BaseModel):
     user_id: int
     amount: float
+    income: float = 0.0
 
 class TransactionData(BaseModel):
     user_id: int
@@ -76,14 +77,20 @@ async def detect_anomaly(req: AnomalyRequest):
                             columns=['amount', 'month', 'day_of_week'])
     # IsolationForest returns -1 for anomalies and 1 for normal
     prediction = models["anomaly_detector"].predict(features)[0]
-    return {"is_anomaly": bool(prediction == -1)}
+    is_anomaly = bool(prediction == -1)
+    
+    # Heuristic fallback to ensure large items are flagged as security alerts
+    if req.amount > 20000:
+        is_anomaly = True
+        
+    return {"is_anomaly": is_anomaly}
 
 @app.post("/health-score")
 async def health_score(req: HealthRequest):
     if "health_score" not in models:
         raise HTTPException(status_code=500, detail="Model not loaded")
     
-    features = pd.DataFrame([[req.user_id, req.amount]], columns=['user_id', 'amount'])
+    features = pd.DataFrame([[req.user_id, req.amount, req.income]], columns=['user_id', 'amount', 'income'])
     prediction = models["health_score"].predict(features)[0]
     return {"health_score": round(float(prediction), 2)}
 
@@ -92,7 +99,7 @@ async def savings_efficiency(req: HealthRequest):
     if "savings_efficiency" not in models:
         raise HTTPException(status_code=500, detail="Model not loaded")
     
-    features = pd.DataFrame([[req.user_id, req.amount]], columns=['user_id', 'amount'])
+    features = pd.DataFrame([[req.user_id, req.amount, req.income]], columns=['user_id', 'amount', 'income'])
     prediction = models["savings_efficiency"].predict(features)[0]
     return {"savings_efficiency": round(float(prediction), 2)}
 

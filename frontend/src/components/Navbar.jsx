@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, ReceiptText, Wallet, LogOut, TrendingUp } from 'lucide-react';
+import { LayoutDashboard, ReceiptText, Wallet, LogOut, TrendingUp, PiggyBank } from 'lucide-react';
 
 const Navbar = () => {
     const { user, logout } = useAuth();
@@ -32,6 +32,10 @@ const Navbar = () => {
                     <Link to="/budgets" className="flex items-center gap-2 text-slate-300 hover:text-white transition-colors">
                         <Wallet className="w-5 h-5" />
                         <span>Budgets</span>
+                    </Link>
+                    <Link to="/savings" className="flex items-center gap-2 text-slate-300 hover:text-white transition-colors">
+                        <PiggyBank className="w-5 h-5" />
+                        <span>Savings</span>
                     </Link>
                 </div>
             )}

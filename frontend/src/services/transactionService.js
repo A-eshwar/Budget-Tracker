@@ -12,9 +12,14 @@ const deleteTransaction = (id) => {
     return api.delete(`/transactions/${id}`);
 };
 
+const updateTransaction = (id, transaction) => {
+    return api.put(`/transactions/${id}`, transaction);
+};
+
 const transactionService = {
     getAllTransactions,
     createTransaction,
+    updateTransaction,
     deleteTransaction
 };
 

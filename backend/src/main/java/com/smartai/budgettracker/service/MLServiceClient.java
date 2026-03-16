@@ -32,18 +32,18 @@ public class MLServiceClient {
                 .bodyToMono(Map.class);
     }
 
-    public Mono<Map> getHealthScore(Long userId, Double totalAmount) {
+    public Mono<Map> getHealthScore(Long userId, Double totalAmount, Double income) {
         return webClient.post()
                 .uri("/health-score")
-                .bodyValue(Map.of("user_id", userId, "amount", totalAmount))
+                .bodyValue(Map.of("user_id", userId, "amount", totalAmount, "income", income))
                 .retrieve()
                 .bodyToMono(Map.class);
     }
 
-    public Mono<Map> getSavingsEfficiency(Long userId, Double totalAmount) {
+    public Mono<Map> getSavingsEfficiency(Long userId, Double totalAmount, Double income) {
         return webClient.post()
                 .uri("/savings-efficiency")
-                .bodyValue(Map.of("user_id", userId, "amount", totalAmount))
+                .bodyValue(Map.of("user_id", userId, "amount", totalAmount, "income", income))
                 .retrieve()
                 .bodyToMono(Map.class);
     }

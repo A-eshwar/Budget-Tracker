@@ -47,7 +47,7 @@ public class AIInsightService {
                 .map(Transaction::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        double totalAmount = currentMonthSpending.doubleValue();
+        Double totalAmount = currentMonthSpending.doubleValue();
 
         if (transactions.isEmpty()) {
             metrics.setHealthScore(BigDecimal.ZERO);
@@ -68,8 +68,15 @@ public class AIInsightService {
                 .map(Map.Entry::getKey)
                 .orElse("expenses");
 
-            Map health = mlServiceClient.getHealthScore(userId, totalAmount).block();
-            Map savings = mlServiceClient.getSavingsEfficiency(userId, totalAmount).block();
+            Double currentMonthIncome = transactions.stream()
+                .filter(t -> t.getTransactionDate().getMonth() == now.getMonth() && t.getTransactionDate().getYear() == now.getYear())
+                .filter(t -> t.getType() == Transaction.TransactionType.INCOME)
+                .map(Transaction::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .doubleValue();
+
+            Map health = mlServiceClient.getHealthScore(userId, totalAmount, currentMonthIncome).block();
+            Map savings = mlServiceClient.getSavingsEfficiency(userId, totalAmount, currentMonthIncome).block();
             Map rec = mlServiceClient.getRecommendations(userId, now.getMonthValue(), 0, topCategory).block();
 
             if (health != null && health.containsKey("health_score")) {

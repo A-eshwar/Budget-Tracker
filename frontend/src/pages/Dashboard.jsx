@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import aiInsightService from '../services/aiInsightService';
 import transactionService from '../services/transactionService';
+import savingService from '../services/savingService';
 import {
     PieChart, Pie, Cell, ResponsiveContainer,
     BarChart, Bar, XAxis, YAxis, Tooltip, Legend
@@ -9,7 +10,7 @@ import {
 import {
     TrendingUp, AlertTriangle, Lightbulb,
     ArrowUpRight, ArrowDownRight, Activity,
-    PlusCircle, Wallet, ArrowRight
+    PlusCircle, Wallet, ArrowRight, PiggyBank
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -17,6 +18,7 @@ const Dashboard = () => {
     const { user } = useAuth();
     const [insights, setInsights] = useState(null);
     const [transactions, setTransactions] = useState([]);
+    const [savings, setSavings] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -25,12 +27,14 @@ const Dashboard = () => {
 
     const fetchData = async () => {
         try {
-            const [insightsRes, transRes] = await Promise.all([
+            const [insightsRes, transRes, savingsRes] = await Promise.all([
                 aiInsightService.getInsights().catch(() => ({ data: null })),
-                transactionService.getAllTransactions()
+                transactionService.getAllTransactions(),
+                savingService.getSavings().catch(() => ({ data: [] }))
             ]);
             setInsights(insightsRes.data);
             setTransactions(transRes.data);
+            setSavings(savingsRes.data);
         } catch (err) {
             console.error("Error fetching dashboard data", err);
         } finally {
@@ -49,7 +53,8 @@ const Dashboard = () => {
         .filter(t => t.type === 'EXPENSE')
         .reduce((sum, t) => sum + Number(t.amount), 0);
 
-    const balance = totalIncome - totalExpense;
+    const totalSavings = savings.reduce((sum, s) => sum + Number(s.amount), 0);
+    const balance = totalIncome - totalExpense - totalSavings;
 
     // Current month spending
     const currentMonth = new Date().getMonth();
@@ -139,11 +144,11 @@ const Dashboard = () => {
                 </div>
 
                 <div className="card group relative overflow-hidden">
-                    <p className="text-slate-400 text-sm font-bold uppercase tracking-wider">Monthly Spending</p>
-                    <h3 className="text-4xl font-black text-white mt-2">₹{monthlySpending.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</h3>
-                    <div className="flex items-center gap-2 mt-4 text-rose-500 text-sm font-bold bg-rose-500/10 w-fit px-3 py-1 rounded-full">
-                        <ArrowDownRight className="w-4 h-4" />
-                        <span>Current Month</span>
+                    <p className="text-slate-400 text-sm font-bold uppercase tracking-wider">Total Savings</p>
+                    <h3 className="text-4xl font-black text-white mt-2">₹{totalSavings.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</h3>
+                    <div className="flex items-center gap-2 mt-4 text-sky-500 text-sm font-bold bg-sky-500/10 w-fit px-3 py-1 rounded-full">
+                        <PiggyBank className="w-4 h-4" />
+                        <span>Secured Future</span>
                     </div>
                 </div>
 
@@ -154,8 +159,8 @@ const Dashboard = () => {
                             <PlusCircle className="w-4 h-4" />
                             Add Cash
                         </Link>
-                        <Link to="/budgets" className="glass hover:bg-white/10 p-2 rounded-xl transition-all border border-white/10 flex items-center justify-center gap-2 text-xs text-white font-bold">
-                            Plan Budget
+                        <Link to="/savings" className="glass hover:bg-white/10 p-2 rounded-xl transition-all border border-white/10 flex items-center justify-center gap-2 text-xs text-white font-bold">
+                            Grow Savings
                         </Link>
                     </div>
                 </div>

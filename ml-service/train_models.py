@@ -65,16 +65,26 @@ def train_models(df=None):
 
     # 3. Anomaly Detection (Isolation Forest)
     X_anomaly = df[['amount', 'month', 'day_of_week']]
-    anomaly_model = IsolationForest(contamination=0.03)
+    # Increase contamination to flag more anomalies, handling small datasets
+    anomaly_model = IsolationForest(contamination=0.1)
     anomaly_model.fit(X_anomaly)
     joblib.dump(anomaly_model, 'models/anomaly_detector.joblib')
     print("Trained Anomaly Detector")
 
     # 4. Financial Health Score
     if not expenses_df.empty:
+        # Get monthly income (Salary) per user
+        income_df = df[df['category'] == 'Salary']
+        monthly_income = income_df.groupby(['user_id', 'month'])['amount'].sum().reset_index().rename(columns={'amount': 'income'})
+
         monthly_total = expenses_df.groupby(['user_id', 'month'])['amount'].sum().reset_index()
-        X_health = monthly_total[['user_id', 'amount']]
-        y_health = np.clip(100 - (monthly_total['amount'] / 600), 0, 100)
+        # Merge income with expenses
+        monthly_total = pd.merge(monthly_total, monthly_income, on=['user_id', 'month'], how='left')
+        monthly_total['income'] = monthly_total['income'].fillna(60000) # Default to 60000 if no income found
+
+        X_health = monthly_total[['user_id', 'amount', 'income']]
+        # Health score: 100 - (expense / income) * 100, clamped to [0, 100]
+        y_health = np.clip(100 - (monthly_total['amount'] / monthly_total['income'] * 100), 0, 100)
         
         health_model = RandomForestRegressor()
         health_model.fit(X_health, y_health)
@@ -82,7 +92,8 @@ def train_models(df=None):
         print("Trained Financial Health Score Model")
 
         # 5. Savings Efficiency
-        y_savings = np.clip((60000 - monthly_total['amount']) / 600, 0, 100)
+        # Efficiency: (income - expense) / income * 100
+        y_savings = np.clip((monthly_total['income'] - monthly_total['amount']) / monthly_total['income'] * 100, 0, 100)
         savings_model = DecisionTreeRegressor()
         savings_model.fit(X_health, y_savings)
         joblib.dump(savings_model, 'models/savings_efficiency_model.joblib')

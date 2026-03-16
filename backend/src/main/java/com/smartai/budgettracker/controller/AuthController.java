@@ -111,8 +111,12 @@ public class AuthController {
     }
     
     user.setMonthlySalary(request.getMonthlySalary());
-    user.setProfileSetup(true);
-    userRepository.save(user);
+    
+    // Clear existing default budgets before setting new ones
+    List<DefaultBudget> existingBudgets = defaultBudgetRepository.findByUserId(user.getId());
+    if (existingBudgets != null && !existingBudgets.isEmpty()) {
+        defaultBudgetRepository.deleteAll(existingBudgets);
+    }
     
     if (request.getDefaultBudgets() != null) {
         for (DefaultBudgetDTO dto : request.getDefaultBudgets()) {
@@ -124,7 +128,7 @@ public class AuthController {
         }
     }
 
-    if (request.getMonthlySalary() != null) {
+    if (request.getMonthlySalary() != null && !user.getProfileSetup()) {
         Transaction salaryTx = new Transaction();
         salaryTx.setUser(user);
         salaryTx.setCategory("Salary");
@@ -134,6 +138,9 @@ public class AuthController {
         salaryTx.setType(Transaction.TransactionType.INCOME);
         transactionRepository.save(salaryTx);
     }
+    
+    user.setProfileSetup(true);
+    userRepository.save(user);
     
     return ResponseEntity.ok(new MessageResponse("Profile setup successfully!"));
   }

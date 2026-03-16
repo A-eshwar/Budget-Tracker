@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import budgetService from '../services/budgetService';
 import transactionService from '../services/transactionService';
-import { Target, Wallet, TrendingUp, Edit3, Plus, Calendar, Trash2 } from 'lucide-react';
+import { Target, Wallet, TrendingUp, Edit3, Plus, Calendar, Trash2, Check, X } from 'lucide-react';
 
 const Budgets = () => {
     const [budgets, setBudgets] = useState([]);
@@ -10,6 +10,7 @@ const Budgets = () => {
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
     const [isEditingOverride, setIsEditingOverride] = useState(false);
+    const [confirmDeleteId, setConfirmDeleteId] = useState(null);
     const [formData, setFormData] = useState({
         category: 'Food',
         amount: ''
@@ -79,14 +80,22 @@ const Budgets = () => {
         setIsEditingOverride(false);
     };
 
-    const handleDelete = async (id) => {
-        if (!window.confirm("Are you sure you want to delete this specific month override and revert to default?")) return;
+    const handleDeleteClick = (id) => {
+        setConfirmDeleteId(id);
+    };
+
+    const confirmDelete = async (id) => {
         try {
             await budgetService.deleteBudget(id);
+            setConfirmDeleteId(null);
             fetchData();
         } catch (err) {
             console.error(err);
         }
+    };
+
+    const cancelDelete = () => {
+        setConfirmDeleteId(null);
     };
 
     const calculateSpent = (category) => {
@@ -200,13 +209,24 @@ const Budgets = () => {
                                         </div>
                                         <div className="flex items-center gap-2">
                                             {b.id && (
-                                                <button 
-                                                    onClick={() => handleDelete(b.id)}
-                                                    className="p-2 bg-slate-800 hover:bg-rose-500/20 text-slate-300 hover:text-rose-500 rounded-xl transition-colors cursor-pointer"
-                                                    title="Delete Override"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
+                                                confirmDeleteId === b.id ? (
+                                                    <div className="flex items-center gap-1 bg-slate-800 rounded-xl p-1">
+                                                        <button onClick={() => confirmDelete(b.id)} className="p-1 text-emerald-500 hover:bg-emerald-500/10 rounded" title="Confirm Delete">
+                                                            <Check className="w-4 h-4" />
+                                                        </button>
+                                                        <button onClick={cancelDelete} className="p-1 text-slate-400 hover:bg-slate-700 rounded" title="Cancel">
+                                                            <X className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <button 
+                                                        onClick={() => handleDeleteClick(b.id)}
+                                                        className="p-2 bg-slate-800 hover:bg-rose-500/20 text-slate-300 hover:text-rose-500 rounded-xl transition-colors cursor-pointer"
+                                                        title="Delete Override"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                )
                                             )}
                                             <button 
                                                 onClick={() => handleEdit(b)}

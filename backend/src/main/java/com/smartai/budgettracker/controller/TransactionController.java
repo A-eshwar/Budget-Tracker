@@ -30,8 +30,18 @@ public class TransactionController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteTransaction(@PathVariable Long id) {
-        transactionService.deleteTransaction(id);
+    public ResponseEntity<Void> deleteTransaction(
+            @AuthenticationPrincipal UserDetailsImpl userDetails,
+            @PathVariable Long id) {
+        transactionService.deleteTransaction(userDetails.getId(), id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<TransactionDTO> updateTransaction(
+            @AuthenticationPrincipal UserDetailsImpl userDetails,
+            @PathVariable Long id,
+            @RequestBody TransactionDTO dto) {
+        return ResponseEntity.ok(transactionService.updateTransaction(id, userDetails.getId(), dto));
     }
 }

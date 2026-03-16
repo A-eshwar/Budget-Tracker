@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import transactionService from '../services/transactionService';
-import { Plus, Trash2, Search, Filter, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, Search, Filter, AlertCircle, Edit3, Check, X } from 'lucide-react';
 
 const Transactions = () => {
     const [transactions, setTransactions] = useState([]);
@@ -13,6 +13,8 @@ const Transactions = () => {
     });
     const [loading, setLoading] = useState(true);
     const [showAdd, setShowAdd] = useState(false);
+    const [editId, setEditId] = useState(null);
+    const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
     const categories = ['Food', 'Transport', 'Entertainment', 'Shopping', 'Utilities', 'Rent', 'Health', 'General', 'Salary', 'Investment'];
 
@@ -34,7 +36,11 @@ const Transactions = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            await transactionService.createTransaction(formData);
+            if (editId) {
+                await transactionService.updateTransaction(editId, formData);
+            } else {
+                await transactionService.createTransaction(formData);
+            }
             setFormData({
                 amount: '',
                 category: 'Food',
@@ -43,21 +49,42 @@ const Transactions = () => {
                 type: 'EXPENSE'
             });
             setShowAdd(false);
+            setEditId(null);
             fetchTransactions();
         } catch (err) {
             console.error(err);
         }
     };
 
-    const handleDelete = async (id) => {
-        if (window.confirm('Delete this transaction?')) {
-            try {
-                await transactionService.deleteTransaction(id);
-                fetchTransactions();
-            } catch (err) {
-                console.error(err);
-            }
+    const handleEdit = (t) => {
+        setFormData({
+            amount: t.amount,
+            category: t.category,
+            description: t.description,
+            transactionDate: t.transactionDate,
+            type: t.type
+        });
+        setEditId(t.id);
+        setShowAdd(true);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const handleDeleteClick = (id) => {
+        setConfirmDeleteId(id);
+    };
+
+    const confirmDelete = async (id) => {
+        try {
+            await transactionService.deleteTransaction(id);
+            setConfirmDeleteId(null);
+            fetchTransactions();
+        } catch (err) {
+            console.error(err);
         }
+    };
+
+    const cancelDelete = () => {
+        setConfirmDeleteId(null);
     };
 
     return (
@@ -78,7 +105,9 @@ const Transactions = () => {
 
             {showAdd && (
                 <div className="card max-w-2xl mx-auto border border-sky-500/30">
-                    <h2 className="text-xl font-bold text-white mb-6">New Transaction</h2>
+                    <h2 className="text-xl font-bold text-white mb-6">
+                        {editId ? 'Edit Transaction' : 'New Transaction'}
+                    </h2>
                     <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label className="block text-sm font-medium text-slate-300 mb-2">Amount</label>
@@ -137,10 +166,16 @@ const Transactions = () => {
                         <div className="md:col-span-2 flex justify-end gap-3 mt-2">
                             <button
                                 type="button"
-                                onClick={() => setShowAdd(false)}
+                                onClick={() => {
+                                    setShowAdd(false);
+                                    setEditId(null);
+                                    setFormData({ amount: '', category: 'Food', description: '', transactionDate: new Date().toISOString().split('T')[0], type: 'EXPENSE' });
+                                }}
                                 className="px-6 py-2 text-slate-400 hover:text-white transition-colors"
                             > Cancel </button>
-                            <button type="submit" className="btn-primary px-8"> Save Transaction </button>
+                            <button type="submit" className="btn-primary px-8"> 
+                                {editId ? 'Update Transaction' : 'Save Transaction'} 
+                            </button>
                         </div>
                     </form>
                 </div>
@@ -207,12 +242,33 @@ const Transactions = () => {
                                         {t.type === 'INCOME' ? '+' : '-'}₹{Number(t.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                                     </td>
                                     <td className="px-6 py-4 text-center">
-                                        <button
-                                            onClick={() => handleDelete(t.id)}
-                                            className="p-2 text-slate-600 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
+                                        {confirmDeleteId === t.id ? (
+                                            <div className="flex items-center justify-center gap-2">
+                                                <button onClick={() => confirmDelete(t.id)} className="p-1 text-emerald-500 hover:bg-emerald-500/10 rounded" title="Confirm Delete">
+                                                    <Check className="w-4 h-4" />
+                                                </button>
+                                                <button onClick={cancelDelete} className="p-1 text-slate-400 hover:bg-slate-800 rounded" title="Cancel">
+                                                    <X className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button
+                                                    onClick={() => handleEdit(t)}
+                                                    className="p-2 text-slate-600 hover:text-sky-500 transition-colors"
+                                                    title="Edit Transaction"
+                                                >
+                                                    <Edit3 className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDeleteClick(t.id)}
+                                                    className="p-2 text-slate-600 hover:text-rose-500 transition-colors"
+                                                    title="Delete Transaction"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        )}
                                     </td>
                                 </tr>
                             ))}
