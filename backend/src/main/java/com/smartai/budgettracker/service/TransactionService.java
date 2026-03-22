@@ -34,6 +34,9 @@ public class TransactionService {
     private BudgetRepository budgetRepository;
 
     @Autowired
+    private com.smartai.budgettracker.repository.DefaultBudgetRepository defaultBudgetRepository;
+
+    @Autowired
     private AlertRepository alertRepository;
 
     public List<TransactionDTO> getTransactionsByUserId(Long userId) {
@@ -55,16 +58,18 @@ public class TransactionService {
         transaction.setTransactionDate(dto.getTransactionDate());
         transaction.setType(dto.getType());
 
-        // Perform Anomaly Detection via ML Service
-        try {
-            int month = dto.getTransactionDate().getMonthValue();
-            int dayOfWeek = dto.getTransactionDate().getDayOfWeek().getValue() - 1; // 0-6
-            Map result = mlServiceClient.detectAnomaly(dto.getAmount().doubleValue(), month, dayOfWeek).block();
-            if (result != null && (Boolean) result.get("is_anomaly")) {
-                transaction.setAnomaly(true);
+        // Perform Anomaly Detection via ML Service ONLY for Expenses
+        if (transaction.getType() == Transaction.TransactionType.EXPENSE) {
+            try {
+                int month = dto.getTransactionDate().getMonthValue();
+                int dayOfWeek = dto.getTransactionDate().getDayOfWeek().getValue() - 1; // 0-6
+                Map result = mlServiceClient.detectAnomaly(dto.getAmount().doubleValue(), month, dayOfWeek).block();
+                if (result != null && (Boolean) result.get("is_anomaly")) {
+                    transaction.setAnomaly(true);
+                }
+            } catch (Exception e) {
+                // Log error and continue
             }
-        } catch (Exception e) {
-            // Log error and continue
         }
 
         Transaction saved = transactionRepository.save(transaction);
@@ -132,24 +137,39 @@ public class TransactionService {
         int year = transaction.getTransactionDate().getYear();
         String category = transaction.getCategory();
 
-        budgetRepository.findByUserIdAndCategoryAndMonthAndYear(user.getId(), category, month, year)
-                .ifPresent(budget -> {
-                    java.math.BigDecimal totalSpent = transactionRepository.findByUserIdOrderByTransactionDateDesc(user.getId()).stream()
-                            .filter(t -> t.getType() == Transaction.TransactionType.EXPENSE)
-                            .filter(t -> t.getCategory().equals(category))
-                            .filter(t -> t.getTransactionDate().getMonthValue() == month)
-                            .filter(t -> t.getTransactionDate().getYear() == year)
-                            .map(Transaction::getAmount)
-                            .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+        System.out.println("Checking budget for Category: " + category + " Month: " + month + " Year: " + year);
 
-                    if (totalSpent.compareTo(budget.getAmount()) > 0) {
-                        // Create an alert
-                        Alert alert = new Alert();
-                        alert.setUser(user);
-                        alert.setType("BUDGET_EXCEEDED");
-                        alert.setMessage("You have exceeded your budget of ₹" + budget.getAmount() + " for " + category + " in " + transaction.getTransactionDate().getMonth() + ".");
-                        alertRepository.save(alert);
-                    }
-                });
+        java.math.BigDecimal limit = budgetRepository.findByUserIdAndCategoryAndMonthAndYear(user.getId(), category, month, year)
+                .map(Budget::getAmount)
+                .orElseGet(() -> defaultBudgetRepository.findByUserId(user.getId()).stream()
+                        .filter(db -> db.getCategory().equals(category))
+                        .findFirst()
+                        .map(com.smartai.budgettracker.entity.DefaultBudget::getAmount)
+                        .orElse(null));
+
+        if (limit != null) {
+            java.math.BigDecimal totalSpent = transactionRepository.findByUserIdOrderByTransactionDateDesc(user.getId()).stream()
+                    .filter(t -> t.getType() == Transaction.TransactionType.EXPENSE)
+                    .filter(t -> t.getCategory().equals(category))
+                    .filter(t -> t.getTransactionDate().getMonthValue() == month)
+                    .filter(t -> t.getTransactionDate().getYear() == year)
+                    .map(Transaction::getAmount)
+                    .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+
+            System.out.println("Found limit: " + limit + ", Total Spent: " + totalSpent);
+
+            if (totalSpent.compareTo(limit) > 0) {
+                System.out.println("BUDGET EXCEEDED! Saving alert...");
+                Alert alert = new Alert();
+                alert.setUser(user);
+                alert.setType("BUDGET_EXCEEDED");
+                alert.setMessage("You have exceeded your budget of ₹" + limit + " for " + category + " in month " + month + ".");
+                alertRepository.save(alert);
+            } else {
+                System.out.println("Budget NOT exceeded.");
+            }
+        } else {
+            System.out.println("No budget found for this category.");
+        }
     }
 }

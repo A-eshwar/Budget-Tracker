@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import aiInsightService from '../services/aiInsightService';
 import transactionService from '../services/transactionService';
 import savingService from '../services/savingService';
+import alertService from '../services/alertService';
 import {
     PieChart, Pie, Cell, ResponsiveContainer,
     BarChart, Bar, XAxis, YAxis, Tooltip, Legend
@@ -10,7 +11,7 @@ import {
 import {
     TrendingUp, AlertTriangle, Lightbulb,
     ArrowUpRight, ArrowDownRight, Activity,
-    PlusCircle, Wallet, ArrowRight, PiggyBank
+    PlusCircle, Wallet, ArrowRight, PiggyBank, X
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -19,6 +20,7 @@ const Dashboard = () => {
     const [insights, setInsights] = useState(null);
     const [transactions, setTransactions] = useState([]);
     const [savings, setSavings] = useState([]);
+    const [alerts, setAlerts] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -27,14 +29,16 @@ const Dashboard = () => {
 
     const fetchData = async () => {
         try {
-            const [insightsRes, transRes, savingsRes] = await Promise.all([
+            const [insightsRes, transRes, savingsRes, alertsRes] = await Promise.all([
                 aiInsightService.getInsights().catch(() => ({ data: null })),
                 transactionService.getAllTransactions(),
-                savingService.getSavings().catch(() => ({ data: [] }))
+                savingService.getSavings().catch(() => ({ data: [] })),
+                alertService.getUnreadAlerts().catch(() => ({ data: [] }))
             ]);
             setInsights(insightsRes.data);
             setTransactions(transRes.data);
             setSavings(savingsRes.data);
+            setAlerts(alertsRes.data);
         } catch (err) {
             console.error("Error fetching dashboard data", err);
         } finally {
@@ -130,7 +134,7 @@ const Dashboard = () => {
             </header>
 
             {/* Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <div className="card group relative overflow-hidden">
                     <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
                         <Wallet className="w-24 h-24 text-white" />
@@ -140,6 +144,15 @@ const Dashboard = () => {
                     <div className="flex items-center gap-2 mt-4 text-emerald-500 text-sm font-bold bg-emerald-500/10 w-fit px-3 py-1 rounded-full">
                         <ArrowUpRight className="w-4 h-4" />
                         <span>Available Funds</span>
+                    </div>
+                </div>
+
+                <div className="card group relative overflow-hidden">
+                    <p className="text-slate-400 text-sm font-bold uppercase tracking-wider">Total Expense</p>
+                    <h3 className="text-4xl font-black text-white mt-2">₹{totalExpense.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</h3>
+                    <div className="flex items-center gap-2 mt-4 text-rose-500 text-sm font-bold bg-rose-500/10 w-fit px-3 py-1 rounded-full">
+                        <ArrowDownRight className="w-4 h-4" />
+                        <span>Total Spent</span>
                     </div>
                 </div>
 
@@ -287,16 +300,33 @@ const Dashboard = () => {
                                 <h2 className="text-xl font-bold text-white">Security Alerts</h2>
                             </div>
                             <div className="space-y-4">
-                                {transactions.filter(t => t.anomaly).length > 0 ? (
-                                    transactions.filter(t => t.anomaly).slice(0, 3).map((t, i) => (
-                                        <div key={i} className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl">
-                                            <div className="flex items-center gap-2 mb-1">
-                                                <TrendingUp className="w-3 h-3 text-rose-500" />
-                                                <p className="text-rose-100 text-[10px] font-black uppercase tracking-widest">Anomaly</p>
+                                {transactions.filter(t => t.anomaly).length > 0 || alerts.length > 0 ? (
+                                    <>
+                                        {alerts.slice(0, 3).map((a, i) => (
+                                            <div key={`alert-${i}`} className="p-4 bg-orange-500/10 border border-orange-500/20 rounded-2xl relative">
+                                                <button onClick={async () => {
+                                                    await alertService.markAsRead(a.id);
+                                                    setAlerts(alerts.filter(x => x.id !== a.id));
+                                                }} className="absolute top-2 right-2 text-slate-400 hover:text-white p-1">
+                                                    <X className="w-3 h-3" />
+                                                </button>
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <AlertTriangle className="w-3 h-3 text-orange-500" />
+                                                    <p className="text-orange-100 text-[10px] font-black uppercase tracking-widest">Budget Warning</p>
+                                                </div>
+                                                <p className="text-orange-100/80 text-sm font-medium">{a.message}</p>
                                             </div>
-                                            <p className="text-rose-100/80 text-sm font-medium">Unusual ₹{t.amount} in {t.category}</p>
-                                        </div>
-                                    ))
+                                        ))}
+                                        {transactions.filter(t => t.anomaly).slice(0, 3).map((t, i) => (
+                                            <div key={`anomaly-${i}`} className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <TrendingUp className="w-3 h-3 text-rose-500" />
+                                                    <p className="text-rose-100 text-[10px] font-black uppercase tracking-widest">Anomaly</p>
+                                                </div>
+                                                <p className="text-rose-100/80 text-sm font-medium">Unusual ₹{t.amount} in {t.category}</p>
+                                            </div>
+                                        ))}
+                                    </>
                                 ) : (
                                     <div className="text-center py-10">
                                         <div className="w-12 h-12 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto mb-4">

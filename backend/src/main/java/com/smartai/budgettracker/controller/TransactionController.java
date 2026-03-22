@@ -33,7 +33,7 @@ public class TransactionController {
     public ResponseEntity<Void> deleteTransaction(
             @AuthenticationPrincipal UserDetailsImpl userDetails,
             @PathVariable Long id) {
-        transactionService.deleteTransaction(userDetails.getId(), id);
+        transactionService.deleteTransaction(id, userDetails.getId());
         return ResponseEntity.noContent().build();
     }
 

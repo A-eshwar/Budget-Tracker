@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import transactionService from '../services/transactionService';
+import savingService from '../services/savingService';
+import budgetService from '../services/budgetService';
 import { Plus, Trash2, Search, Filter, AlertCircle, Edit3, Check, X } from 'lucide-react';
 
 const Transactions = () => {
@@ -15,6 +17,10 @@ const Transactions = () => {
     const [showAdd, setShowAdd] = useState(false);
     const [editId, setEditId] = useState(null);
     const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+    const [savings, setSavings] = useState([]);
+    const [budgets, setBudgets] = useState([]);
+    const [errorMsg, setErrorMsg] = useState('');
+    const [budgetWarning, setBudgetWarning] = useState(null);
 
     const categories = ['Food', 'Transport', 'Entertainment', 'Shopping', 'Utilities', 'Rent', 'Health', 'General', 'Salary', 'Investment'];
 
@@ -24,8 +30,15 @@ const Transactions = () => {
 
     const fetchTransactions = async () => {
         try {
-            const res = await transactionService.getAllTransactions();
-            setTransactions(res.data);
+            const currentDate = new Date();
+            const [transRes, savingsRes, budgetRes] = await Promise.all([
+                transactionService.getAllTransactions(),
+                savingService.getSavings().catch(() => ({ data: [] })),
+                budgetService.getAllBudgets(currentDate.getMonth() + 1, currentDate.getFullYear()).catch(() => ({ data: [] }))
+            ]);
+            setTransactions(transRes.data);
+            setSavings(savingsRes.data);
+            setBudgets(budgetRes.data);
         } catch (err) {
             console.error(err);
         } finally {
@@ -33,13 +46,73 @@ const Transactions = () => {
         }
     };
 
+    // Calculate balance
+    const totalIncome = transactions.filter(t => t.type === 'INCOME').reduce((sum, t) => sum + Number(t.amount), 0);
+    const totalExpense = transactions.filter(t => t.type === 'EXPENSE').reduce((sum, t) => sum + Number(t.amount), 0);
+    const totalSavings = savings.reduce((sum, s) => sum + Number(s.amount), 0);
+    const availableBalance = totalIncome - totalExpense - totalSavings;
+
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setErrorMsg('');
+
+        let effectiveBalance = availableBalance;
+        if (editId) {
+            const originalTx = transactions.find(t => t.id === editId);
+            if (originalTx && originalTx.type === 'EXPENSE') {
+                effectiveBalance += Number(originalTx.amount);
+            }
+        }
+
+        if (formData.type === 'EXPENSE' && Number(formData.amount) > effectiveBalance) {
+            setErrorMsg(`Not enough balance. Cannot add transaction. Available balance: ₹${effectiveBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`);
+            return;
+        }
+
+        if (formData.type === 'EXPENSE') {
+            const categoryBudget = budgets.find(b => b.category === formData.category);
+            if (categoryBudget) {
+                const currentDate = new Date(formData.transactionDate);
+                const month = currentDate.getMonth() + 1;
+                const year = currentDate.getFullYear();
+                
+                let spentThisMonth = transactions
+                    .filter(t => t.type === 'EXPENSE' && t.category === formData.category &&
+                                 new Date(t.transactionDate).getMonth() + 1 === month &&
+                                 new Date(t.transactionDate).getFullYear() === year)
+                    .reduce((sum, t) => sum + Number(t.amount), 0);
+                    
+                if (editId) {
+                    const originalTx = transactions.find(t => t.id === editId);
+                    if (originalTx && originalTx.category === formData.category &&
+                        new Date(originalTx.transactionDate).getMonth() + 1 === month &&
+                        new Date(originalTx.transactionDate).getFullYear() === year) {
+                         spentThisMonth -= Number(originalTx.amount);
+                    }
+                }
+                
+                const newTotal = spentThisMonth + Number(formData.amount);
+                if (newTotal > categoryBudget.amount) {
+                    setBudgetWarning({
+                        category: formData.category,
+                        limit: categoryBudget.amount,
+                        formData: formData,
+                        editId: editId
+                    });
+                    return; // Pause the submission, wait for modal confirmation
+                }
+            }
+        }
+
+        executeSubmission(formData, editId);
+    };
+
+    const executeSubmission = async (data, editIdToUse) => {
         try {
-            if (editId) {
-                await transactionService.updateTransaction(editId, formData);
+            if (editIdToUse) {
+                await transactionService.updateTransaction(editIdToUse, data);
             } else {
-                await transactionService.createTransaction(formData);
+                await transactionService.createTransaction(data);
             }
             setFormData({
                 amount: '',
@@ -50,6 +123,8 @@ const Transactions = () => {
             });
             setShowAdd(false);
             setEditId(null);
+            setErrorMsg('');
+            setBudgetWarning(null);
             fetchTransactions();
         } catch (err) {
             console.error(err);
@@ -103,11 +178,51 @@ const Transactions = () => {
                 </button>
             </header>
 
+            {budgetWarning && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm">
+                    <div className="card max-w-md w-full border border-orange-500/30 animate-in zoom-in-95 duration-200">
+                        <div className="flex items-center gap-4 mb-4">
+                            <div className="w-12 h-12 bg-orange-500/10 rounded-full flex items-center justify-center flex-shrink-0">
+                                <AlertCircle className="w-6 h-6 text-orange-500" />
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-black text-white">Budget Exceeded</h3>
+                                <p className="text-orange-400 text-sm font-bold mt-1">Category: {budgetWarning.category}</p>
+                            </div>
+                        </div>
+                        <p className="text-slate-300 text-sm mb-6 leading-relaxed">
+                            This transaction will push you over your target monthly budget of <strong className="text-white">₹{budgetWarning.limit}</strong>. 
+                            A security alert will be posted to your Dashboard if you proceed.
+                        </p>
+                        <div className="flex justify-end gap-3">
+                            <button 
+                                onClick={() => setBudgetWarning(null)} 
+                                className="px-5 py-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-colors font-bold text-sm"
+                            >
+                                Cancel
+                            </button>
+                            <button 
+                                onClick={() => executeSubmission(budgetWarning.formData, budgetWarning.editId)} 
+                                className="px-5 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-sm transition-colors"
+                            >
+                                Add Anyway
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {showAdd && (
                 <div className="card max-w-2xl mx-auto border border-sky-500/30">
                     <h2 className="text-xl font-bold text-white mb-6">
                         {editId ? 'Edit Transaction' : 'New Transaction'}
                     </h2>
+                    {errorMsg && (
+                        <div className="mb-6 p-4 bg-rose-500/20 border border-rose-500/50 rounded-xl flex items-center gap-3">
+                            <AlertCircle className="w-5 h-5 text-rose-500 flex-shrink-0" />
+                            <p className="text-rose-200 text-sm font-medium">{errorMsg}</p>
+                        </div>
+                    )}
                     <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label className="block text-sm font-medium text-slate-300 mb-2">Amount</label>
@@ -169,6 +284,7 @@ const Transactions = () => {
                                 onClick={() => {
                                     setShowAdd(false);
                                     setEditId(null);
+                                    setErrorMsg('');
                                     setFormData({ amount: '', category: 'Food', description: '', transactionDate: new Date().toISOString().split('T')[0], type: 'EXPENSE' });
                                 }}
                                 className="px-6 py-2 text-slate-400 hover:text-white transition-colors"
