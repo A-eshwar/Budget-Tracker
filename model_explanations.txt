@@ -1,0 +1,46 @@
+AI Smart Budget Tracker - ML Models Detailed Explanation
+
+This document explains the Machine Learning models used in the system, the parameters they require for predictions, their inner workings, and a code explanation of how they are implemented and served.
+
+---
+
+### 1. Expense Predictor
+* **Algorithm**: Random Forest Regressor
+* **Prediction Parameters (Inputs)**: `user_id`, `month`, `category_code` (e.g., Food=0, Transportation=1).
+* **Inner Workings**: The training code (`train_models.py`) groups historical transactions by user, month, and category to calculate total monthly spending per category. The model learns the mapping between these three inputs and the actual `amount` spent. During prediction, it estimates the total amount the user will spend in a specific category for a given month.
+
+### 2. Overspending Alert
+* **Algorithm**: XGBoost Classifier
+* **Prediction Parameters (Inputs)**: `user_id`, `month`, `amount` (the user's current total spending).
+* **Inner Workings**: The code synthesizes a target budget (e.g., 40,000) and marks historical months as `overspent` (1) or `not overspent` (0) if the total expenses exceed that budget. The XGBoost classifier is then trained to predict this binary classification. When queried, it assesses the current total `amount` along with the user ID to determine if an overspending scenario is likely.
+
+### 3. Anomaly Detection
+* **Algorithm**: Isolation Forest
+* **Prediction Parameters (Inputs)**: `amount` (transaction value), `month`, `day_of_week`.
+* **Inner Workings**: An unsupervised model is trained with a 10% "contamination" rate (assuming 10% of transactions might be outliers). It isolates abnormal spending patterns based purely on the amount and when it occurred. During prediction, it returns a boolean indicating an anomaly. A hardcoded heuristic in `main.py` also guarantees that any transaction exceeding 20,000 is systematically flagged as an anomaly.
+
+### 4. Financial Health Score
+* **Algorithm**: Random Forest Regressor
+* **Prediction Parameters (Inputs)**: `user_id`, `amount` (total monthly expenses), `income` (monthly salary).
+* **Inner Workings**: The training labels are synthesized using a formula: `100 - (expense / income * 100)`, clamped between 0 and 100. The model learns how individual user features, combined with their expense-to-income ratio, correspond to this health metric. If no income data exists, a default of 60,000 is assumed.
+
+### 5. Savings Efficiency
+* **Algorithm**: Decision Tree Regressor
+* **Prediction Parameters (Inputs)**: `user_id`, `amount` (total expenses), `income`.
+* **Inner Workings**: Similar to the Health Score, the training labels for savings efficiency are calculated as `((income - expense) / income) * 100`. The decision tree learns to map the raw inputs to this percentage, representing how much of their income the user successfully sets aside.
+
+### 6. Personalized Recommendations
+* **Algorithm**: Random Forest Regressor
+* **Prediction Parameters (Inputs)**: `user_id`, `month`, `category_code`.
+* **Inner Workings**: Uses the same features as the Expense Predictor to forecast upcoming category spending. The prediction endpoint (`main.py`) then wraps this forecasted amount in a heuristic recommendation logic, suggesting the user attempts a 10% reduction in this category to save money.
+
+---
+
+### Code Explanation
+The machine learning architecture is split into two main Python files inside the `ml-service` directory:
+
+1. **`train_models.py` (Data Pipeline & Training)**:
+   This script handles the ETL (Extract, Transform, Load) and training process. It loads structured historical data (`transactions.csv`), performs feature engineering (such as encoding categorical strings to numeric `category_code`s, and grouping sums by month), calculates the synthetic target labels for the models, and trains the Scikit-learn and XGBoost objects. Once trained, these models are serialized and saved to disk using `joblib` inside the `models/` directory.
+
+2. **`main.py` (FastAPI Serving Layer)**:
+   This is the web server that makes the functionality accessible to the BudgetTracker backend. Upon startup, it loads all `.joblib` model files into memory into a `models` dictionary. It exposes REST API endpoints (like `/predict-expense`, `/detect-anomaly`) using `FastAPI` and `Pydantic` data validation models. When the backend sends a request, `main.py` maps the JSON payload into a Pandas DataFrame, passes it directly into the `predict()` function of the relevant ML model, and converts the numerical output back into a user-friendly JSON response (such as boolean alerts or recommended actions in text form). It also includes a `/train` endpoint allowing the system to pass new data batches for retraining the models dynamically.

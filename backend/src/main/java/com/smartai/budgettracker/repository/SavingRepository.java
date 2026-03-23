@@ -9,5 +9,4 @@ import java.util.Optional;
 @Repository
 public interface SavingRepository extends JpaRepository<Saving, Long> {
     List<Saving> findByUserIdOrderByYearDescMonthDesc(Long userId);
-    Optional<Saving> findByUserIdAndMonthAndYear(Long userId, int month, int year);
 }

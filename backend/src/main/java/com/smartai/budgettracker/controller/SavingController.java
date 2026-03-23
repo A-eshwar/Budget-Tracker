@@ -32,7 +32,7 @@ public class SavingController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteSaving(
             @AuthenticationPrincipal UserDetailsImpl userDetails,
-            @PathVariable Long id) {
+            @PathVariable("id") Long id) {
         savingService.deleteSaving(userDetails.getId(), id);
         return ResponseEntity.noContent().build();
     }

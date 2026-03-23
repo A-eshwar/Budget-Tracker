@@ -48,7 +48,7 @@ public class SavingService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal otherSavings = savingRepository.findByUserIdOrderByYearDescMonthDesc(userId).stream()
-                .filter(s -> !(s.getMonth() == dto.getMonth() && s.getYear() == dto.getYear()))
+                .filter(s -> dto.getId() == null || !s.getId().equals(dto.getId()))
                 .map(Saving::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
@@ -58,13 +58,16 @@ public class SavingService {
             throw new RuntimeException("Not enough balance");
         }
 
-        Saving saving = savingRepository.findByUserIdAndMonthAndYear(userId, dto.getMonth(), dto.getYear())
-                .orElse(new Saving());
+        Saving saving = new Saving();
+        if (dto.getId() != null) {
+            saving = savingRepository.findById(dto.getId()).orElse(new Saving());
+        }
 
         saving.setUser(user);
         saving.setAmount(dto.getAmount());
         saving.setMonth(dto.getMonth());
         saving.setYear(dto.getYear());
+        saving.setDescription(dto.getDescription());
 
         Saving saved = savingRepository.save(saving);
         return convertToDTO(saved);
@@ -85,6 +88,7 @@ public class SavingService {
         dto.setAmount(s.getAmount());
         dto.setMonth(s.getMonth());
         dto.setYear(s.getYear());
+        dto.setDescription(s.getDescription());
         return dto;
     }
 }

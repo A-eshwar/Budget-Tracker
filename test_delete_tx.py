@@ -22,7 +22,7 @@ if resp.status_code != 200:
     print("Login failed:", resp.status_code, resp.text)
     exit(1)
 
-jwt_token = resp.json().get("jwt")
+jwt_token = resp.json().get("token")
 headers = {
     "Authorization": f"Bearer {jwt_token}",
     "Content-Type": "application/json"

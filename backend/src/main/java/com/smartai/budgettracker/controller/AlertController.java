@@ -29,7 +29,7 @@ public class AlertController {
     }
 
     @PutMapping("/{id}/read")
-    public ResponseEntity<Void> markAsRead(@AuthenticationPrincipal UserDetailsImpl userDetails, @PathVariable Long id) {
+    public ResponseEntity<Void> markAsRead(@AuthenticationPrincipal UserDetailsImpl userDetails, @PathVariable("id") Long id) {
         Alert alert = alertRepository.findById(id).orElseThrow(() -> new RuntimeException("Alert not found"));
         if (!alert.getUser().getId().equals(userDetails.getId())) {
             throw new RuntimeException("Unauthorized");

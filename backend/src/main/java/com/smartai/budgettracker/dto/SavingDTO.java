@@ -7,6 +7,7 @@ public class SavingDTO {
     private BigDecimal amount;
     private int month;
     private int year;
+    private String description;
 
     public SavingDTO() {}
 
@@ -18,4 +19,6 @@ public class SavingDTO {
     public void setMonth(int month) { this.month = month; }
     public int getYear() { return year; }
     public void setYear(int year) { this.year = year; }
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
 }

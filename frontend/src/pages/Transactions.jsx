@@ -2,7 +2,10 @@ import React, { useState, useEffect } from 'react';
 import transactionService from '../services/transactionService';
 import savingService from '../services/savingService';
 import budgetService from '../services/budgetService';
-import { Plus, Trash2, Search, Filter, AlertCircle, Edit3, Check, X } from 'lucide-react';
+import { Plus, Trash2, Search, Filter, AlertCircle, Edit3, Check, X, Download } from 'lucide-react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 
 const Transactions = () => {
     const [transactions, setTransactions] = useState([]);
@@ -16,7 +19,7 @@ const Transactions = () => {
     const [loading, setLoading] = useState(true);
     const [showAdd, setShowAdd] = useState(false);
     const [editId, setEditId] = useState(null);
-    const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+    const [modalDeleteId, setModalDeleteId] = useState(null);
     const [savings, setSavings] = useState([]);
     const [budgets, setBudgets] = useState([]);
     const [errorMsg, setErrorMsg] = useState('');
@@ -144,38 +147,87 @@ const Transactions = () => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    const handleDeleteClick = (id) => {
-        setConfirmDeleteId(id);
-    };
+    const handleDeleteClick = (id) => setModalDeleteId(id);
+    const cancelDelete = () => setModalDeleteId(null);
 
-    const confirmDelete = async (id) => {
+    const confirmDelete = async () => {
+        if (!modalDeleteId) return;
         try {
-            await transactionService.deleteTransaction(id);
-            setConfirmDeleteId(null);
+            await transactionService.deleteTransaction(modalDeleteId);
+            setModalDeleteId(null);
             fetchTransactions();
         } catch (err) {
             console.error(err);
         }
     };
 
-    const cancelDelete = () => {
-        setConfirmDeleteId(null);
+    const handleExportCSV = () => {
+        if (transactions.length === 0) return;
+        const headers = ["Date", "Category", "Description", "Type", "Amount"];
+        const csvContent = [
+            headers.join(","),
+            ...transactions.map(t => `${t.transactionDate},${t.category},"${(t.description || '').replace(/"/g, '""')}",${t.type},${t.amount}`)
+        ].join("\n");
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `transactions_${new Date().toISOString().split('T')[0]}.csv`;
+        link.click();
+    };
+
+    const handleExportExcel = () => {
+        if (transactions.length === 0) return;
+        const ws = XLSX.utils.json_to_sheet(transactions.map(t => ({
+            Date: t.transactionDate,
+            Category: t.category,
+            Description: t.description,
+            Type: t.type,
+            Amount: Number(t.amount)
+        })));
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Transactions");
+        XLSX.writeFile(wb, `transactions_${new Date().toISOString().split('T')[0]}.xlsx`);
+    };
+
+    const handleExportPDF = () => {
+        if (transactions.length === 0) return;
+        const doc = new jsPDF();
+        doc.text("Transactions Report", 14, 15);
+        autoTable(doc, {
+            head: [['Date', 'Category', 'Description', 'Type', 'Amount']],
+            body: transactions.map(t => [t.transactionDate, t.category, t.description, t.type, t.amount]),
+            startY: 20,
+        });
+        doc.save(`transactions_${new Date().toISOString().split('T')[0]}.pdf`);
     };
 
     return (
         <div className="space-y-8">
-            <header className="flex justify-between items-center">
+            <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h1 className="text-3xl font-bold text-white">Transactions</h1>
                     <p className="text-slate-400 mt-1">Manage your income and expenses</p>
                 </div>
-                <button
-                    onClick={() => setShowAdd(!showAdd)}
-                    className="btn-primary flex items-center gap-2"
-                >
-                    <Plus className="w-5 h-5" />
-                    <span>Add Transaction</span>
-                </button>
+                <div className="flex flex-wrap gap-3">
+                    <div className="group relative">
+                        <button className="btn-secondary flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-xl hover:bg-slate-700 transition">
+                            <Download className="w-4 h-4" />
+                            <span>Export</span>
+                        </button>
+                        <div className="absolute right-0 mt-2 w-48 bg-slate-800 border border-slate-700 rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+                            <button onClick={handleExportPDF} className="block w-full text-left px-4 py-3 text-sm text-slate-300 hover:bg-white/5 hover:text-white first:rounded-t-xl transition-colors">Export as PDF</button>
+                            <button onClick={handleExportCSV} className="block w-full text-left px-4 py-3 text-sm text-slate-300 hover:bg-white/5 hover:text-white transition-colors">Export as CSV</button>
+                            <button onClick={handleExportExcel} className="block w-full text-left px-4 py-3 text-sm text-slate-300 hover:bg-white/5 hover:text-white last:rounded-b-xl transition-colors">Export as Excel</button>
+                        </div>
+                    </div>
+                    <button
+                        onClick={() => setShowAdd(!showAdd)}
+                        className="btn-primary flex items-center gap-2"
+                    >
+                        <Plus className="w-5 h-5" />
+                        <span>Add Transaction</span>
+                    </button>
+                </div>
             </header>
 
             {budgetWarning && (
@@ -358,16 +410,6 @@ const Transactions = () => {
                                         {t.type === 'INCOME' ? '+' : '-'}₹{Number(t.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                                     </td>
                                     <td className="px-6 py-4 text-center">
-                                        {confirmDeleteId === t.id ? (
-                                            <div className="flex items-center justify-center gap-2">
-                                                <button onClick={() => confirmDelete(t.id)} className="p-1 text-emerald-500 hover:bg-emerald-500/10 rounded" title="Confirm Delete">
-                                                    <Check className="w-4 h-4" />
-                                                </button>
-                                                <button onClick={cancelDelete} className="p-1 text-slate-400 hover:bg-slate-800 rounded" title="Cancel">
-                                                    <X className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                        ) : (
                                             <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                 <button
                                                     onClick={() => handleEdit(t)}
@@ -384,7 +426,6 @@ const Transactions = () => {
                                                     <Trash2 className="w-4 h-4" />
                                                 </button>
                                             </div>
-                                        )}
                                     </td>
                                 </tr>
                             ))}
@@ -399,6 +440,32 @@ const Transactions = () => {
                     </table>
                 </div>
             </div>
+            {/* Delete Confirmation Modal */}
+            {modalDeleteId && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="card max-w-sm w-full border border-rose-500/30 shadow-2xl animate-in zoom-in-95 duration-200">
+                        <div className="flex items-center gap-4 mb-4">
+                            <div className="p-3 bg-rose-500/10 rounded-full text-rose-500 flex-shrink-0">
+                                <AlertCircle className="w-6 h-6" />
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-black text-white">Confirm Deletion</h3>
+                            </div>
+                        </div>
+                        <p className="text-slate-300 text-sm mb-6 leading-relaxed">
+                            Are you sure you want to delete?
+                        </p>
+                        <div className="flex gap-3 justify-end mt-2">
+                            <button onClick={cancelDelete} className="px-5 py-2.5 rounded-xl font-bold text-sm text-slate-400 hover:text-white hover:bg-white/5 transition-colors">
+                                Cancel
+                            </button>
+                            <button onClick={confirmDelete} className="px-5 py-2.5 rounded-xl font-bold text-sm text-white bg-rose-500 hover:bg-rose-600 transition-colors shadow-lg shadow-rose-500/25">
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

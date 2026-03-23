@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import budgetService from '../services/budgetService';
 import transactionService from '../services/transactionService';
-import { Target, Wallet, TrendingUp, Edit3, Plus, Calendar, Trash2, Check, X } from 'lucide-react';
+import { Target, Wallet, TrendingUp, Edit3, Plus, Calendar, Trash2, Check, X, AlertCircle } from 'lucide-react';
 
 const Budgets = () => {
     const [budgets, setBudgets] = useState([]);
@@ -10,7 +10,7 @@ const Budgets = () => {
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
     const [isEditingOverride, setIsEditingOverride] = useState(false);
-    const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+    const [modalDeleteId, setModalDeleteId] = useState(null);
     const [formData, setFormData] = useState({
         category: 'Food',
         amount: ''
@@ -80,22 +80,18 @@ const Budgets = () => {
         setIsEditingOverride(false);
     };
 
-    const handleDeleteClick = (id) => {
-        setConfirmDeleteId(id);
-    };
+    const handleDeleteClick = (id) => setModalDeleteId(id);
+    const cancelDelete = () => setModalDeleteId(null);
 
-    const confirmDelete = async (id) => {
+    const confirmDelete = async () => {
+        if (!modalDeleteId) return;
         try {
-            await budgetService.deleteBudget(id);
-            setConfirmDeleteId(null);
+            await budgetService.deleteBudget(modalDeleteId);
+            setModalDeleteId(null);
             fetchData();
         } catch (err) {
             console.error(err);
         }
-    };
-
-    const cancelDelete = () => {
-        setConfirmDeleteId(null);
     };
 
     const calculateSpent = (category) => {
@@ -209,24 +205,13 @@ const Budgets = () => {
                                         </div>
                                         <div className="flex items-center gap-2">
                                             {b.id && (
-                                                confirmDeleteId === b.id ? (
-                                                    <div className="flex items-center gap-1 bg-slate-800 rounded-xl p-1">
-                                                        <button onClick={() => confirmDelete(b.id)} className="p-1 text-emerald-500 hover:bg-emerald-500/10 rounded" title="Confirm Delete">
-                                                            <Check className="w-4 h-4" />
-                                                        </button>
-                                                        <button onClick={cancelDelete} className="p-1 text-slate-400 hover:bg-slate-700 rounded" title="Cancel">
-                                                            <X className="w-4 h-4" />
-                                                        </button>
-                                                    </div>
-                                                ) : (
-                                                    <button 
-                                                        onClick={() => handleDeleteClick(b.id)}
-                                                        className="p-2 bg-slate-800 hover:bg-rose-500/20 text-slate-300 hover:text-rose-500 rounded-xl transition-colors cursor-pointer"
-                                                        title="Delete Override"
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </button>
-                                                )
+                                                <button 
+                                                    onClick={() => handleDeleteClick(b.id)}
+                                                    className="p-2 bg-slate-800 hover:bg-rose-500/20 text-slate-300 hover:text-rose-500 rounded-xl transition-colors cursor-pointer"
+                                                    title="Delete Override"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
                                             )}
                                             <button 
                                                 onClick={() => handleEdit(b)}
@@ -281,6 +266,32 @@ const Budgets = () => {
                     </div>
                 </div>
             </div>
+            {/* Delete Confirmation Modal */}
+            {modalDeleteId && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="card max-w-sm w-full border border-rose-500/30 shadow-2xl animate-in zoom-in-95 duration-200">
+                        <div className="flex items-center gap-4 mb-4">
+                            <div className="p-3 bg-rose-500/10 rounded-full text-rose-500 flex-shrink-0">
+                                <AlertCircle className="w-6 h-6" />
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-black text-white">Confirm Deletion</h3>
+                            </div>
+                        </div>
+                        <p className="text-slate-300 text-sm mb-6 leading-relaxed">
+                            Are you sure you want to delete?
+                        </p>
+                        <div className="flex gap-3 justify-end mt-2">
+                            <button onClick={cancelDelete} className="px-5 py-2.5 rounded-xl font-bold text-sm text-slate-400 hover:text-white hover:bg-white/5 transition-colors">
+                                Cancel
+                            </button>
+                            <button onClick={confirmDelete} className="px-5 py-2.5 rounded-xl font-bold text-sm text-white bg-rose-500 hover:bg-rose-600 transition-colors shadow-lg shadow-rose-500/25">
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

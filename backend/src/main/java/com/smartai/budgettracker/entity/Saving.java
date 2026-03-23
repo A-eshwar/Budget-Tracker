@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import java.math.BigDecimal;
 
 @Entity
-@Table(name = "savings", uniqueConstraints = {@UniqueConstraint(columnNames = {"user_id", "month", "year"})})
+@Table(name = "savings")
 public class Saving {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -23,6 +23,9 @@ public class Saving {
     @Column(nullable = false)
     private int year;
 
+    @Column(nullable = false)
+    private String description;
+
     public Saving() {}
 
     public Long getId() { return id; }
@@ -35,4 +38,6 @@ public class Saving {
     public void setMonth(int month) { this.month = month; }
     public int getYear() { return year; }
     public void setYear(int year) { this.year = year; }
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
 }

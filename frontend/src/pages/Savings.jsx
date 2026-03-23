@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import savingService from '../services/savingService';
 import transactionService from '../services/transactionService';
-import { Plus, Trash2, PiggyBank, Calendar, AlertCircle, Check, X, Wallet } from 'lucide-react';
+import { Plus, Minus, Trash2, PiggyBank, Calendar, AlertCircle, Check, X, Wallet } from 'lucide-react';
 
 const Savings = () => {
     const [savings, setSavings] = useState([]);
@@ -9,11 +9,16 @@ const Savings = () => {
     const [formData, setFormData] = useState({
         amount: '',
         month: new Date().getMonth() + 1,
-        year: new Date().getFullYear()
+        year: new Date().getFullYear(),
+        description: ''
     });
     const [loading, setLoading] = useState(true);
     const [showAdd, setShowAdd] = useState(false);
-    const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+    const [modalDeleteId, setModalDeleteId] = useState(null);
+    const [topUpId, setTopUpId] = useState(null);
+    const [topUpAmount, setTopUpAmount] = useState('');
+    const [reduceId, setReduceId] = useState(null);
+    const [reduceAmount, setReduceAmount] = useState('');
     const [error, setError] = useState(null);
 
     const months = [
@@ -70,7 +75,8 @@ const Savings = () => {
             setFormData({
                 amount: '',
                 month: new Date().getMonth() + 1,
-                year: new Date().getFullYear()
+                year: new Date().getFullYear(),
+                description: ''
             });
             setShowAdd(false);
             fetchData();
@@ -83,22 +89,83 @@ const Savings = () => {
         }
     };
 
-    const handleDeleteClick = (id) => {
-        setConfirmDeleteId(id);
-    };
-
-    const confirmDelete = async (id) => {
+    const handleTopUpSubmit = async (e, saving) => {
+        e.preventDefault();
+        setError(null);
         try {
-            await savingService.deleteSaving(id);
-            setConfirmDeleteId(null);
+            const addedAmount = Number(topUpAmount);
+            if (addedAmount <= 0) {
+                setError("Please enter a valid amount to add.");
+                return;
+            }
+            await savingService.addOrUpdateSaving({
+                id: saving.id,
+                amount: Number(saving.amount) + addedAmount,
+                month: saving.month,
+                year: saving.year,
+                description: saving.description
+            });
+            setTopUpId(null);
+            setTopUpAmount('');
             fetchData();
         } catch (err) {
-            console.error(err);
+            if (err.response && err.response.data && err.response.data.message) {
+                setError(err.response.data.message);
+            } else {
+                setError("An error occurred while topping up saving.");
+            }
         }
     };
 
-    const cancelDelete = () => {
-        setConfirmDeleteId(null);
+    const handleReduceSubmit = async (e, saving) => {
+        e.preventDefault();
+        setError(null);
+        try {
+            const deductedAmount = Number(reduceAmount);
+            if (deductedAmount <= 0) {
+                setError("Please enter a valid amount to reduce.");
+                return;
+            }
+            if (deductedAmount > Number(saving.amount)) {
+                setError("Cannot reduce more than the current saving amount.");
+                return;
+            }
+            await savingService.addOrUpdateSaving({
+                id: saving.id,
+                amount: Number(saving.amount) - deductedAmount,
+                month: saving.month,
+                year: saving.year,
+                description: saving.description
+            });
+            setReduceId(null);
+            setReduceAmount('');
+            fetchData();
+        } catch (err) {
+            if (err.response && err.response.data && err.response.data.message) {
+                setError(err.response.data.message);
+            } else {
+                setError("An error occurred while reducing saving.");
+            }
+        }
+    };
+
+    const handleDeleteClick = (id) => setModalDeleteId(id);
+    const cancelDelete = () => setModalDeleteId(null);
+
+    const confirmDelete = async () => {
+        if (!modalDeleteId) return;
+        try {
+            await savingService.deleteSaving(modalDeleteId);
+            setModalDeleteId(null);
+            fetchData();
+        } catch (err) {
+            console.error(err);
+            if (err.response && err.response.data && err.response.data.message) {
+                setError("Delete error: " + err.response.data.message);
+            } else {
+                setError("Failed to delete saving. It may be linked elsewhere or you lack permission.");
+            }
+        }
     };
 
     return (
@@ -179,6 +246,16 @@ const Savings = () => {
                                 </select>
                             </div>
                         </div>
+                        <div className="md:col-span-2">
+                            <label className="block text-sm font-medium text-slate-300 mb-2">Description</label>
+                            <textarea
+                                required
+                                className="w-full bg-slate-900/50 border border-slate-700 rounded-xl py-2 px-4 text-white focus:outline-none focus:ring-2 focus:ring-sky-500/50"
+                                rows="2"
+                                value={formData.description}
+                                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                            ></textarea>
+                        </div>
                         <div className="md:col-span-2 flex justify-end gap-3">
                             <button
                                 type="button"
@@ -198,29 +275,82 @@ const Savings = () => {
                             <div className="p-2 bg-indigo-500/10 rounded-xl">
                                 <PiggyBank className="w-6 h-6 text-indigo-500" />
                             </div>
-                            {confirmDeleteId === s.id ? (
-                                <div className="flex items-center gap-2">
-                                    <button onClick={() => confirmDelete(s.id)} className="p-1 text-emerald-500 hover:bg-emerald-500/10 rounded">
-                                        <Check className="w-4 h-4" />
+                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button
+                                        onClick={() => { setTopUpId(s.id); setReduceId(null); }}
+                                        className="p-2 text-slate-600 hover:text-emerald-500 transition-colors"
+                                        title="Top Up Savings"
+                                    >
+                                        <Plus className="w-4 h-4" />
                                     </button>
-                                    <button onClick={cancelDelete} className="p-1 text-slate-400 hover:bg-slate-800 rounded">
-                                        <X className="w-4 h-4" />
+                                    <button
+                                        onClick={() => { setReduceId(s.id); setTopUpId(null); }}
+                                        className="p-2 text-slate-600 hover:text-amber-500 transition-colors"
+                                        title="Reduce Savings"
+                                    >
+                                        <Minus className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                        onClick={() => handleDeleteClick(s.id)}
+                                        className="p-2 text-slate-600 hover:text-rose-500 transition-colors"
+                                        title="Delete Savings"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
                                     </button>
                                 </div>
-                            ) : (
-                                <button
-                                    onClick={() => handleDeleteClick(s.id)}
-                                    className="p-2 text-slate-600 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100"
-                                >
-                                    <Trash2 className="w-4 h-4" />
-                                </button>
-                            )}
                         </div>
                         <div className="flex items-center gap-2 text-slate-400 text-xs font-bold uppercase tracking-widest mb-1">
                             <Calendar className="w-3 h-3" />
                             {months[s.month - 1]} {s.year}
                         </div>
-                        <h3 className="text-2xl font-black text-white">₹{Number(s.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</h3>
+                        <h3 className="text-2xl font-black text-white mb-2">₹{Number(s.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</h3>
+                        <p className="text-sm text-slate-300 truncate" title={s.description}>{s.description}</p>
+                        
+                        {topUpId === s.id && (
+                            <form onSubmit={(e) => handleTopUpSubmit(e, s)} className="mt-4 pt-4 border-t border-slate-800 animate-in slide-in-from-top-2">
+                                <label className="block text-xs font-medium text-slate-400 mb-1">Add Amount</label>
+                                <div className="flex gap-2">
+                                    <input
+                                        type="number"
+                                        required
+                                        autoFocus
+                                        className="w-full bg-slate-900 border border-slate-700 rounded-lg py-1 px-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-sky-500"
+                                        value={topUpAmount}
+                                        onChange={(e) => setTopUpAmount(e.target.value)}
+                                        placeholder="e.g. 500"
+                                    />
+                                    <button type="submit" className="px-3 py-1 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm font-bold transition-colors">
+                                        Add
+                                    </button>
+                                    <button type="button" onClick={() => { setTopUpId(null); setTopUpAmount(''); }} className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-sm font-bold transition-colors">
+                                        Cancel
+                                    </button>
+                                </div>
+                            </form>
+                        )}
+
+                        {reduceId === s.id && (
+                            <form onSubmit={(e) => handleReduceSubmit(e, s)} className="mt-4 pt-4 border-t border-slate-800 animate-in slide-in-from-top-2">
+                                <label className="block text-xs font-medium text-slate-400 mb-1">Reduce Amount</label>
+                                <div className="flex gap-2">
+                                    <input
+                                        type="number"
+                                        required
+                                        autoFocus
+                                        className="w-full bg-slate-900 border border-slate-700 rounded-lg py-1 px-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-amber-500"
+                                        value={reduceAmount}
+                                        onChange={(e) => setReduceAmount(e.target.value)}
+                                        placeholder="e.g. 500"
+                                    />
+                                    <button type="submit" className="px-3 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm font-bold transition-colors">
+                                        Reduce
+                                    </button>
+                                    <button type="button" onClick={() => { setReduceId(null); setReduceAmount(''); }} className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-sm font-bold transition-colors">
+                                        Cancel
+                                    </button>
+                                </div>
+                            </form>
+                        )}
                     </div>
                 ))}
             </div>
@@ -231,6 +361,32 @@ const Savings = () => {
                         <PiggyBank className="w-8 h-8 text-slate-600" />
                     </div>
                     <p className="text-slate-500">No savings recorded yet.</p>
+                </div>
+            )}
+            {/* Delete Confirmation Modal */}
+            {modalDeleteId && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="card max-w-sm w-full border border-rose-500/30 shadow-2xl animate-in zoom-in-95 duration-200">
+                        <div className="flex items-center gap-4 mb-4">
+                            <div className="p-3 bg-rose-500/10 rounded-full text-rose-500 flex-shrink-0">
+                                <AlertCircle className="w-6 h-6" />
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-black text-white">Confirm Deletion</h3>
+                            </div>
+                        </div>
+                        <p className="text-slate-300 text-sm mb-6 leading-relaxed">
+                            Are you sure you want to delete?
+                        </p>
+                        <div className="flex gap-3 justify-end mt-2">
+                            <button onClick={cancelDelete} className="px-5 py-2.5 rounded-xl font-bold text-sm text-slate-400 hover:text-white hover:bg-white/5 transition-colors">
+                                Cancel
+                            </button>
+                            <button onClick={confirmDelete} className="px-5 py-2.5 rounded-xl font-bold text-sm text-white bg-rose-500 hover:bg-rose-600 transition-colors shadow-lg shadow-rose-500/25">
+                                Delete
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

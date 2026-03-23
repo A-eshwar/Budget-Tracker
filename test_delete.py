@@ -19,7 +19,7 @@ resp = session.post("http://localhost:8081/api/auth/login", json={
 })
 
 data = resp.json()
-token = data.get("jwt")
+token = data.get("token")
 if not token:
     print("Failed to login", data)
     exit(1)
