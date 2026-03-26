@@ -5,6 +5,14 @@ import { User, DollarSign, Plus, Trash2, AlertCircle } from 'lucide-react';
 
 const SetupProfile = () => {
     const [monthlySalary, setMonthlySalary] = useState('');
+    const [age, setAge] = useState('');
+    const [dependents, setDependents] = useState('0');
+    const [occupation, setOccupation] = useState('Professional');
+    const [cityTier, setCityTier] = useState('Tier_2');
+    const [rent, setRent] = useState('0');
+    const [loanRepayment, setLoanRepayment] = useState('0');
+    const [insurance, setInsurance] = useState('0');
+    const [desiredSavingsPercentage, setDesiredSavingsPercentage] = useState('20');
     const [defaultBudgets, setDefaultBudgets] = useState([]);
     const [currentCategory, setCurrentCategory] = useState('Food');
     const [currentAmount, setCurrentAmount] = useState('');
@@ -48,6 +56,14 @@ const SetupProfile = () => {
         try {
             await setupProfile({
                 monthlySalary: parseFloat(monthlySalary),
+                age: parseInt(age, 10),
+                dependents: parseInt(dependents, 10),
+                occupation,
+                cityTier,
+                rent: parseFloat(rent) || 0,
+                loanRepayment: parseFloat(loanRepayment) || 0,
+                insurance: parseFloat(insurance) || 0,
+                desiredSavingsPercentage: parseFloat(desiredSavingsPercentage) || 0,
                 defaultBudgets: finalBudgets
             });
             navigate('/');
@@ -91,6 +107,73 @@ const SetupProfile = () => {
                                 value={monthlySalary}
                                 onChange={(e) => setMonthlySalary(e.target.value)}
                             />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div>
+                            <label className="block text-sm font-medium text-slate-300 mb-2">Age</label>
+                            <input type="number" required min="18" max="120"
+                                className="w-full bg-slate-900/50 border border-slate-700 rounded-xl py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all"
+                                placeholder="e.g. 30" value={age} onChange={(e) => setAge(e.target.value)} />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-300 mb-2">Dependents</label>
+                            <input type="number" required min="0" max="20"
+                                className="w-full bg-slate-900/50 border border-slate-700 rounded-xl py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all"
+                                value={dependents} onChange={(e) => setDependents(e.target.value)} />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div>
+                            <label className="block text-sm font-medium text-slate-300 mb-2">Occupation</label>
+                            <select className="w-full bg-slate-900/50 border border-slate-700 rounded-xl py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50 appearance-none transition-all"
+                                value={occupation} onChange={(e) => setOccupation(e.target.value)}>
+                                <option value="Professional" className="bg-slate-900">Professional</option>
+                                <option value="Self_Employed" className="bg-slate-900">Self Employed</option>
+                                <option value="Student" className="bg-slate-900">Student</option>
+                                <option value="Retired" className="bg-slate-900">Retired</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-300 mb-2">City Tier</label>
+                            <select className="w-full bg-slate-900/50 border border-slate-700 rounded-xl py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50 appearance-none transition-all"
+                                value={cityTier} onChange={(e) => setCityTier(e.target.value)}>
+                                <option value="Tier_1" className="bg-slate-900">Tier 1 (Metro)</option>
+                                <option value="Tier_2" className="bg-slate-900">Tier 2</option>
+                                <option value="Tier_3" className="bg-slate-900">Tier 3</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div>
+                            <label className="block text-sm font-medium text-slate-300 mb-2">Monthly Rent</label>
+                            <input type="number" required min="0" step="0.01"
+                                className="w-full bg-slate-900/50 border border-slate-700 rounded-xl py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all"
+                                value={rent} onChange={(e) => setRent(e.target.value)} />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-300 mb-2">Loan Repayment</label>
+                            <input type="number" required min="0" step="0.01"
+                                className="w-full bg-slate-900/50 border border-slate-700 rounded-xl py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all"
+                                value={loanRepayment} onChange={(e) => setLoanRepayment(e.target.value)} />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div>
+                            <label className="block text-sm font-medium text-slate-300 mb-2">Insurance</label>
+                            <input type="number" required min="0" step="0.01"
+                                className="w-full bg-slate-900/50 border border-slate-700 rounded-xl py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all"
+                                value={insurance} onChange={(e) => setInsurance(e.target.value)} />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-300 mb-2">Desired Savings (%)</label>
+                            <input type="number" required min="0" max="100" step="0.1"
+                                className="w-full bg-slate-900/50 border border-slate-700 rounded-xl py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all"
+                                value={desiredSavingsPercentage} onChange={(e) => setDesiredSavingsPercentage(e.target.value)} />
                         </div>
                     </div>
 

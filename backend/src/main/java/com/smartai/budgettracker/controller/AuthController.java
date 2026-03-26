@@ -16,6 +16,7 @@ import com.smartai.budgettracker.dto.LoginRequest;
 import com.smartai.budgettracker.dto.MessageResponse;
 import com.smartai.budgettracker.dto.SignupRequest;
 import com.smartai.budgettracker.dto.ProfileSetupRequest;
+import com.smartai.budgettracker.dto.ProfileUpdateRequest;
 import com.smartai.budgettracker.entity.User;
 import com.smartai.budgettracker.entity.DefaultBudget;
 import com.smartai.budgettracker.dto.DefaultBudgetDTO;
@@ -111,6 +112,14 @@ public class AuthController {
     }
     
     user.setMonthlySalary(request.getMonthlySalary());
+    user.setAge(request.getAge());
+    user.setDependents(request.getDependents());
+    user.setOccupation(request.getOccupation());
+    user.setCityTier(request.getCityTier());
+    user.setRent(request.getRent());
+    user.setLoanRepayment(request.getLoanRepayment());
+    user.setInsurance(request.getInsurance());
+    user.setDesiredSavingsPercentage(request.getDesiredSavingsPercentage());
     
     // Clear existing default budgets before setting new ones
     List<DefaultBudget> existingBudgets = defaultBudgetRepository.findByUserId(user.getId());
@@ -143,5 +152,30 @@ public class AuthController {
     userRepository.save(user);
     
     return ResponseEntity.ok(new MessageResponse("Profile setup successfully!"));
+  }
+
+  @PutMapping("/profile-update")
+  public ResponseEntity<?> updateProfile(@Valid @RequestBody ProfileUpdateRequest request) {
+    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+
+    User user = userRepository.findById(userDetails.getId()).orElse(null);
+    if (user == null) {
+      return ResponseEntity.badRequest().body(new MessageResponse("Error: User not found!"));
+    }
+
+    if (request.getMonthlySalary() != null) user.setMonthlySalary(request.getMonthlySalary());
+    if (request.getAge() != null) user.setAge(request.getAge());
+    if (request.getDependents() != null) user.setDependents(request.getDependents());
+    if (request.getOccupation() != null) user.setOccupation(request.getOccupation());
+    if (request.getCityTier() != null) user.setCityTier(request.getCityTier());
+    if (request.getRent() != null) user.setRent(request.getRent());
+    if (request.getLoanRepayment() != null) user.setLoanRepayment(request.getLoanRepayment());
+    if (request.getInsurance() != null) user.setInsurance(request.getInsurance());
+    if (request.getDesiredSavingsPercentage() != null) user.setDesiredSavingsPercentage(request.getDesiredSavingsPercentage());
+
+    userRepository.save(user);
+
+    return ResponseEntity.ok(user);
   }
 }

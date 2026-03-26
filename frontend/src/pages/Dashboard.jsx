@@ -6,7 +6,8 @@ import savingService from '../services/savingService';
 import alertService from '../services/alertService';
 import {
     PieChart, Pie, Cell, ResponsiveContainer,
-    BarChart, Bar, XAxis, YAxis, Tooltip, Legend
+    BarChart, Bar, XAxis, YAxis, Tooltip, Legend,
+    ComposedChart, Area, CartesianGrid, LineChart, Line
 } from 'recharts';
 import {
     TrendingUp, AlertTriangle, Lightbulb,
@@ -96,6 +97,41 @@ const Dashboard = () => {
             .reduce((sum, t) => sum + Number(t.amount), 0);
         trendData.push({ name: months[m], spending });
     }
+
+    // Calculate budget limit per category
+    const monthlyIncome = user?.monthlySalary || 50000;
+    const defaultBudget = (monthlyIncome * (1 - (user?.desiredSavingsPercentage || 20)/100)) / 6;
+
+    const anomalyData = categoryData.map(c => {
+        const isAnomaly = c.value > defaultBudget;
+        return {
+            name: c.name,
+            spent: c.value,
+            budget: defaultBudget,
+            fill: isAnomaly ? '#ef4444' : '#a855f7' // Red if anomaly, else purple
+        };
+    });
+
+    // Generate forecast data connected to historical data
+    const forecastData = trendData.map((d, idx) => ({ 
+        name: d.name, 
+        spending: d.spending, 
+        // Connect the last historical point
+        forecast: idx === trendData.length - 1 ? d.spending : null 
+    }));
+
+    const lastSpending = trendData[trendData.length - 1]?.spending || 0;
+    const projectedInsight = insights?.predictedNextMonthExpense || lastSpending;
+    const nextMonths = ['Next 1M', 'Next 2M', 'Next 3M'];
+    
+    nextMonths.forEach((m, i) => {
+        const variance = (Math.random() * 0.1 - 0.05); // +/- 5%
+        forecastData.push({
+            name: m,
+            spending: null,
+            forecast: projectedInsight * (1 + variance + (i * 0.02))
+        });
+    });
 
     if (loading) return (
         <div className="flex flex-col items-center justify-center py-20 animate-pulse">
@@ -237,31 +273,51 @@ const Dashboard = () => {
                         <div className="card">
                             <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
                                 <span className="w-2 h-6 bg-indigo-500 rounded-full"></span>
-                                Spending Trend
+                                Spending Trend & Forecast
                             </h2>
                             <div className="h-[300px]">
                                 <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart data={trendData}>
+                                    <LineChart data={forecastData}>
                                         <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12, fontWeight: 700 }} dy={10} />
                                         <YAxis hide />
                                         <Tooltip
-                                            cursor={{ fill: 'rgba(255,255,255,0.02)' }}
                                             contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '16px', color: '#fff' }}
                                         />
-                                        <Bar dataKey="spending" fill="url(#colorSky)" radius={[8, 8, 8, 8]} barSize={40} />
-                                        <defs>
-                                            <linearGradient id="colorSky" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor="#0ea5e9" stopOpacity={1} />
-                                                <stop offset="95%" stopColor="#6366f1" stopOpacity={1} />
-                                            </linearGradient>
-                                        </defs>
-                                    </BarChart>
+                                        <Line type="monotone" dataKey="spending" name="Historical" stroke="#0ea5e9" strokeWidth={4} dot={{ r: 4, fill: '#0ea5e9', strokeWidth: 0 }} />
+                                        <Line type="monotone" dataKey="forecast" name="AI Forecast" stroke="#a855f7" strokeWidth={4} strokeDasharray="5 5" dot={{ r: 4, fill: '#a855f7', strokeWidth: 0 }} connectNulls />
+                                    </LineChart>
                                 </ResponsiveContainer>
                             </div>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    {/* New Unusual Spending Pattern Visualization */}
+                    <div className="card mt-8">
+                        <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                            <span className="w-2 h-6 bg-emerald-500 rounded-full"></span>
+                            Unusual Spending Tracking
+                        </h2>
+                        <div className="h-[350px]">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <ComposedChart data={anomalyData}>
+                                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} dy={10} />
+                                    <YAxis hide />
+                                    <Tooltip
+                                        cursor={{ fill: 'rgba(255,255,255,0.02)' }}
+                                        contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '16px', color: '#fff' }}
+                                    />
+                                    <Area type="monotone" dataKey="budget" name="Safe Limit" fill="#10b981" stroke="#10b981" fillOpacity={0.15} strokeDasharray="3 3" />
+                                    <Bar dataKey="spent" name="Actual Spending" radius={[4, 4, 0, 0]} barSize={40}>
+                                        {anomalyData.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={entry.fill} />
+                                        ))}
+                                    </Bar>
+                                </ComposedChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
                         <div className="lg:col-span-2 card bg-gradient-to-r from-sky-500/10 to-transparent">
                             <div className="flex items-center gap-3 mb-6">
                                 <div className="p-2 bg-amber-500/10 rounded-xl">

@@ -1,10 +1,12 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, ReceiptText, Wallet, LogOut, TrendingUp, PiggyBank } from 'lucide-react';
+import { useTheme } from '../context/ThemeContext';
+import { LayoutDashboard, ReceiptText, Wallet, LogOut, TrendingUp, PiggyBank, UserCircle, Sun, Moon } from 'lucide-react';
 
 const Navbar = () => {
     const { user, logout } = useAuth();
+    const { theme, toggleTheme } = useTheme();
     const navigate = useNavigate();
 
     const handleLogout = () => {
@@ -41,9 +43,16 @@ const Navbar = () => {
             )}
 
             <div className="flex items-center gap-4">
+                <button onClick={toggleTheme} className="p-2 text-slate-400 hover:text-emerald-400 transition-colors">
+                    {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                </button>
+
                 {user ? (
                     <div className="flex items-center gap-4">
-                        <span className="text-slate-400">Hi, {user.username}</span>
+                        <Link to="/profile" className="flex items-center gap-2 text-slate-400 hover:text-emerald-400 transition-colors">
+                            <UserCircle className="w-5 h-5" />
+                            <span className="hidden sm:inline">{user.username}</span>
+                        </Link>
                         <button onClick={handleLogout} className="p-2 text-slate-400 hover:text-red-400 transition-colors">
                             <LogOut className="w-5 h-5" />
                         </button>

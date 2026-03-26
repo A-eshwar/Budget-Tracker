@@ -16,50 +16,10 @@ public class MLServiceClient {
         this.webClient = webClientBuilder.baseUrl(mlServiceUrl).build();
     }
 
-    public Mono<Map> predictExpense(Long userId, int month, int categoryId) {
+    public Mono<Map> executeMLPost(String uri, Map<String, Object> payload) {
         return webClient.post()
-                .uri("/predict-expense")
-                .bodyValue(Map.of("user_id", userId, "month", month, "category_id", categoryId))
-                .retrieve()
-                .bodyToMono(Map.class);
-    }
-
-    public Mono<Map> detectAnomaly(Double amount, int month, int dayOfWeek) {
-        return webClient.post()
-                .uri("/detect-anomaly")
-                .bodyValue(Map.of("amount", amount, "month", month, "day_of_week", dayOfWeek))
-                .retrieve()
-                .bodyToMono(Map.class);
-    }
-
-    public Mono<Map> getHealthScore(Long userId, Double totalAmount, Double income) {
-        return webClient.post()
-                .uri("/health-score")
-                .bodyValue(Map.of("user_id", userId, "amount", totalAmount, "income", income))
-                .retrieve()
-                .bodyToMono(Map.class);
-    }
-
-    public Mono<Map> getSavingsEfficiency(Long userId, Double totalAmount, Double income) {
-        return webClient.post()
-                .uri("/savings-efficiency")
-                .bodyValue(Map.of("user_id", userId, "amount", totalAmount, "income", income))
-                .retrieve()
-                .bodyToMono(Map.class);
-    }
-
-    public Mono<Map> getRecommendations(Long userId, int month, int categoryId, String categoryName) {
-        return webClient.post()
-                .uri("/recommendations")
-                .bodyValue(Map.of("user_id", userId, "month", month, "category_id", categoryId, "category_name", categoryName))
-                .retrieve()
-                .bodyToMono(Map.class);
-    }
-
-    public Mono<Map> checkOverspending(Long userId, Double totalAmount) {
-        return webClient.post()
-                .uri("/overspending-alert")
-                .bodyValue(Map.of("user_id", userId, "amount", totalAmount))
+                .uri(uri)
+                .bodyValue(payload)
                 .retrieve()
                 .bodyToMono(Map.class);
     }

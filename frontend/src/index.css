@@ -21,8 +21,14 @@ body {
   display: flex;
   min-width: 320px;
   min-height: 100vh;
-  background: radial-gradient(circle at top right, #1e1b4b, #020617);
+  background: #000000;
   background-attachment: fixed;
+  transition: background 0.5s ease, color 0.5s ease;
+}
+
+.light body {
+  background: #ffffff;
+  color: #0f172a;
 }
 
 #root {
@@ -35,6 +41,31 @@ body {
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+}
+
+.light .glass {
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.03);
+  color: #1e293b;
+}
+
+.light .text-white {
+  color: #0f172a;
+}
+.light .text-slate-400 {
+  color: #475569;
+}
+.light .text-slate-300 {
+  color: #334155;
+}
+.light .border-white\/5 {
+  border-color: rgba(0,0,0,0.05);
+}
+.light .bg-slate-900\/50, .light .bg-slate-900 {
+  background-color: rgba(255, 255, 255, 0.8);
+  color: #0f172a;
+  border-color: rgba(0,0,0,0.1);
 }
 
 @utility gradient-text {

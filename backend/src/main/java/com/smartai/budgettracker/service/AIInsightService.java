@@ -9,9 +9,7 @@ import com.smartai.budgettracker.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
 import java.util.HashMap;
 import java.util.stream.Collectors;
 
@@ -75,9 +73,36 @@ public class AIInsightService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add)
                 .doubleValue();
 
-            Map health = mlServiceClient.getHealthScore(userId, totalAmount, currentMonthIncome).block();
-            Map savings = mlServiceClient.getSavingsEfficiency(userId, totalAmount, currentMonthIncome).block();
-            Map rec = mlServiceClient.getRecommendations(userId, now.getMonthValue(), 0, topCategory).block();
+            // Build Comprehensive Payload required by new ML Models
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("user_id", user.getId());
+            payload.put("income", user.getMonthlySalary() != null ? user.getMonthlySalary() : currentMonthIncome);
+            payload.put("age", user.getAge() != null ? user.getAge() : 30);
+            payload.put("dependents", user.getDependents() != null ? user.getDependents() : 0);
+            payload.put("occupation", user.getOccupation() != null ? user.getOccupation() : "Professional");
+            payload.put("city_tier", user.getCityTier() != null ? user.getCityTier() : "Tier_2");
+            payload.put("rent", user.getRent() != null ? user.getRent() : 0.0);
+            payload.put("loan_repayment", user.getLoanRepayment() != null ? user.getLoanRepayment() : 0.0);
+            payload.put("insurance", user.getInsurance() != null ? user.getInsurance() : 0.0);
+            payload.put("desired_savings_percentage", user.getDesiredSavingsPercentage() != null ? user.getDesiredSavingsPercentage() : 20.0);
+            payload.put("total_expense", totalAmount);
+            payload.put("category_name", topCategory);
+
+            // Compute basic categorical spending for the Health Score
+            Map<String, Double> catSpend = transactions.stream()
+                .filter(t -> t.getType() == Transaction.TransactionType.EXPENSE)
+                .collect(Collectors.groupingBy(Transaction::getCategory, Collectors.summingDouble(t -> t.getAmount().doubleValue())));
+            
+            payload.put("groceries", catSpend.getOrDefault("Food", 0.0) + catSpend.getOrDefault("Groceries", 0.0));
+            payload.put("transport", catSpend.getOrDefault("Transport", 0.0));
+            payload.put("eating_out", catSpend.getOrDefault("Dining", 0.0));
+            payload.put("entertainment", catSpend.getOrDefault("Entertainment", 0.0));
+            payload.put("utilities", catSpend.getOrDefault("Utilities", 0.0));
+            payload.put("healthcare", catSpend.getOrDefault("Health", 0.0));
+
+            Map health = mlServiceClient.executeMLPost("/health-score", payload).block();
+            Map savings = mlServiceClient.executeMLPost("/savings-efficiency", payload).block();
+            Map rec = mlServiceClient.executeMLPost("/recommendations", payload).block();
 
             if (health != null && health.containsKey("health_score")) {
                 metrics.setHealthScore(new BigDecimal(health.get("health_score").toString()));
@@ -92,9 +117,12 @@ public class AIInsightService {
             }
 
             BigDecimal totalPredicted = BigDecimal.ZERO;
-            for (int catId = 0; catId <= 8; catId++) {
+            String[] categories = {"Food", "Transport", "Entertainment", "Utilities", "Health", "Shopping"};
+            for (String cat : categories) {
                 try {
-                    Map p = mlServiceClient.predictExpense(userId, now.plusMonths(1).getMonthValue(), catId).block();
+                    Map<String, Object> catPayload = new HashMap<>(payload);
+                    catPayload.put("category_name", cat);
+                    Map p = mlServiceClient.executeMLPost("/predict-expense", catPayload).block();
                     if (p != null && p.containsKey("predicted_expense")) {
                         totalPredicted = totalPredicted.add(new BigDecimal(p.get("predicted_expense").toString()));
                     }
@@ -117,23 +145,8 @@ public class AIInsightService {
     }
 
     public void triggerRetraining(Long userId) {
-        List<Transaction> transactions = transactionRepository.findByUserIdOrderByTransactionDateDesc(userId);
-        if (transactions.isEmpty()) return;
-
-        List<Map<String, Object>> data = transactions.stream().map(t -> {
-            Map<String, Object> map = new HashMap<>();
-            map.put("user_id", userId);
-            map.put("amount", t.getAmount().doubleValue());
-            map.put("category", t.getCategory());
-            map.put("date", t.getTransactionDate().toString());
-            map.put("type", t.getType().name());
-            map.put("month", t.getTransactionDate().getMonthValue());
-            map.put("day_of_week", t.getTransactionDate().getDayOfWeek().getValue() - 1);
-            return map;
-        }).collect(Collectors.toList());
-
-        mlServiceClient.trainModels(data).subscribe(
-            result -> System.out.println("ML models retrained successfully for user: " + userId),
+        mlServiceClient.executeMLPost("/train", new HashMap<>()).subscribe(
+            result -> System.out.println("ML models retrained successfully globally from data.csv"),
             error -> System.err.println("Failed to retrain ML models: " + error.getMessage())
         );
     }

@@ -27,6 +27,30 @@ public class User {
     @Column(name = "monthly_salary")
     private BigDecimal monthlySalary;
 
+    @Column(name = "age")
+    private Integer age;
+
+    @Column(name = "dependents")
+    private Integer dependents;
+
+    @Column(name = "occupation")
+    private String occupation;
+
+    @Column(name = "city_tier")
+    private String cityTier;
+
+    @Column(name = "rent")
+    private BigDecimal rent;
+
+    @Column(name = "loan_repayment")
+    private BigDecimal loanRepayment;
+
+    @Column(name = "insurance")
+    private BigDecimal insurance;
+
+    @Column(name = "desired_savings_percentage")
+    private BigDecimal desiredSavingsPercentage;
+
     public User() {}
 
     public User(String username, String email, String password) {
@@ -49,4 +73,20 @@ public class User {
     public void setProfileSetup(Boolean profileSetup) { this.profileSetup = profileSetup; }
     public BigDecimal getMonthlySalary() { return monthlySalary; }
     public void setMonthlySalary(BigDecimal monthlySalary) { this.monthlySalary = monthlySalary; }
+    public Integer getAge() { return age; }
+    public void setAge(Integer age) { this.age = age; }
+    public Integer getDependents() { return dependents; }
+    public void setDependents(Integer dependents) { this.dependents = dependents; }
+    public String getOccupation() { return occupation; }
+    public void setOccupation(String occupation) { this.occupation = occupation; }
+    public String getCityTier() { return cityTier; }
+    public void setCityTier(String cityTier) { this.cityTier = cityTier; }
+    public BigDecimal getRent() { return rent; }
+    public void setRent(BigDecimal rent) { this.rent = rent; }
+    public BigDecimal getLoanRepayment() { return loanRepayment; }
+    public void setLoanRepayment(BigDecimal loanRepayment) { this.loanRepayment = loanRepayment; }
+    public BigDecimal getInsurance() { return insurance; }
+    public void setInsurance(BigDecimal insurance) { this.insurance = insurance; }
+    public BigDecimal getDesiredSavingsPercentage() { return desiredSavingsPercentage; }
+    public void setDesiredSavingsPercentage(BigDecimal desiredSavingsPercentage) { this.desiredSavingsPercentage = desiredSavingsPercentage; }
 }

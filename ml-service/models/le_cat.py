@@ -1,0 +1,6 @@
+import pickle, base64
+
+model_b64 = 'gAWVUgEAAAAAAACMHHNrbGVhcm4ucHJlcHJvY2Vzc2luZy5fbGFiZWyUjAxMYWJlbEVuY29kZXKUk5QpgZR9lCiMCGNsYXNzZXNflIwWbnVtcHkuX2NvcmUubXVsdGlhcnJheZSMDF9yZWNvbnN0cnVjdJSTlIwFbnVtcHmUjAduZGFycmF5lJOUSwCFlEMBYpSHlFKUKEsBSwiFlGgJjAVkdHlwZZSTlIwCTziUiYiHlFKUKEsDjAF8lE5OTkr/////Sv////9LP3SUYoldlCiMCkVhdGluZ19PdXSUjAlFZHVjYXRpb26UjA1FbnRlcnRhaW5tZW50lIwJR3JvY2VyaWVzlIwKSGVhbHRoY2FyZZSMDU1pc2NlbGxhbmVvdXOUjAlUcmFuc3BvcnSUjAlVdGlsaXRpZXOUZXSUYowQX3NrbGVhcm5fdmVyc2lvbpSMBTEuOC4wlHViLg=='
+
+def get_model():
+    return pickle.loads(base64.b64decode(model_b64.encode('utf-8')))

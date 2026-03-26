@@ -17,6 +17,11 @@ const setupProfile = async (data) => {
     return response.data;
 };
 
+const updateProfile = async (data) => {
+    const response = await api.put('/auth/profile-update', data);
+    return response.data;
+};
+
 const logout = () => {
     localStorage.removeItem('user');
 };
@@ -30,7 +35,8 @@ const authService = {
     register,
     logout,
     getCurrentUser,
-    setupProfile
+    setupProfile,
+    updateProfile
 };
 
 export default authService;
