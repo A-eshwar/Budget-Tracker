@@ -23,6 +23,7 @@ const Dashboard = () => {
     const [savings, setSavings] = useState([]);
     const [alerts, setAlerts] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [selectedCategory, setSelectedCategory] = useState('Food');
 
     useEffect(() => {
         fetchData();
@@ -98,17 +99,23 @@ const Dashboard = () => {
         trendData.push({ name: months[m], spending });
     }
 
-    // Calculate budget limit per category
-    const monthlyIncome = user?.monthlySalary || 50000;
-    const defaultBudget = (monthlyIncome * (1 - (user?.desiredSavingsPercentage || 20)/100)) / 6;
+    // Calculate Safe Limit using AI Backend Predictions exactly for the selected category
+    const aiSafeLimit = insights?.categoryForecasts?.[selectedCategory] || 0;
 
-    const anomalyData = categoryData.map(c => {
-        const isAnomaly = c.value > defaultBudget;
+    // Filter transactions specifically for the selected category and sort chronologically
+    const categoryTransactions = transactions
+        .filter(t => t.type === 'EXPENSE' && t.category === selectedCategory)
+        .sort((a, b) => new Date(a.transactionDate) - new Date(b.transactionDate));
+
+    const anomalyData = categoryTransactions.map(t => {
+        const isAnomaly = Number(t.amount) > aiSafeLimit;
+        const dObj = new Date(t.transactionDate);
+        const shortDate = `${dObj.getDate()}/${dObj.getMonth()+1}`;
         return {
-            name: c.name,
-            spent: c.value,
-            budget: defaultBudget,
-            fill: isAnomaly ? '#ef4444' : '#a855f7' // Red if anomaly, else purple
+            name: shortDate,
+            spent: Number(t.amount),
+            budget: aiSafeLimit,
+            fill: isAnomaly ? '#ef4444' : '#10b981' // Red if anomaly, else Green (Safe)
         };
     });
 
@@ -291,29 +298,46 @@ const Dashboard = () => {
                         </div>
                     </div>
 
-                    {/* New Unusual Spending Pattern Visualization */}
+                    {/* New Unusual Spending Pattern Visualization (Categorical Time-Series) */}
                     <div className="card mt-8">
-                        <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                            <span className="w-2 h-6 bg-emerald-500 rounded-full"></span>
-                            Unusual Spending Tracking
-                        </h2>
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                                <span className="w-2 h-6 bg-emerald-500 rounded-full"></span>
+                                Unusual Spending Tracking
+                            </h2>
+                            <select 
+                                value={selectedCategory} 
+                                onChange={(e) => setSelectedCategory(e.target.value)}
+                                className="bg-slate-800 border border-slate-700 text-white text-sm rounded-lg py-2 px-4 focus:ring-emerald-500 focus:border-emerald-500 outline-none cursor-pointer"
+                            >
+                                {['Food', 'Transport', 'Entertainment', 'Utilities', 'Health', 'Shopping', 'Groceries', 'Miscellaneous'].map(cat => (
+                                    <option key={cat} value={cat}>{cat}</option>
+                                ))}
+                            </select>
+                        </div>
                         <div className="h-[350px]">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <ComposedChart data={anomalyData}>
-                                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} dy={10} />
-                                    <YAxis hide />
-                                    <Tooltip
-                                        cursor={{ fill: 'rgba(255,255,255,0.02)' }}
-                                        contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '16px', color: '#fff' }}
-                                    />
-                                    <Area type="monotone" dataKey="budget" name="Safe Limit" fill="#10b981" stroke="#10b981" fillOpacity={0.15} strokeDasharray="3 3" />
-                                    <Bar dataKey="spent" name="Actual Spending" radius={[4, 4, 0, 0]} barSize={40}>
-                                        {anomalyData.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={entry.fill} />
-                                        ))}
-                                    </Bar>
-                                </ComposedChart>
-                            </ResponsiveContainer>
+                            {categoryTransactions.length > 0 ? (
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <ComposedChart data={anomalyData}>
+                                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} dy={10} />
+                                        <YAxis hide />
+                                        <Tooltip
+                                            cursor={{ fill: 'rgba(255,255,255,0.02)' }}
+                                            contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '16px', color: '#fff' }}
+                                        />
+                                        <Area type="monotone" dataKey="budget" name="AI Predicted Safe Limit" fill="#10b981" stroke="#10b981" fillOpacity={0.15} strokeDasharray="3 3" />
+                                        <Bar dataKey="spent" name="Actual Spending" radius={[4, 4, 0, 0]} barSize={30}>
+                                            {anomalyData.map((entry, index) => (
+                                                <Cell key={`cell-${index}`} fill={entry.fill} />
+                                            ))}
+                                        </Bar>
+                                    </ComposedChart>
+                                </ResponsiveContainer>
+                            ) : (
+                                <div className="h-full flex items-center justify-center text-slate-500 text-sm italic">
+                                    No transaction history found for {selectedCategory} to map against AI Limits.
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -332,11 +356,12 @@ const Dashboard = () => {
                             </div>
                             <div className="mt-8 flex flex-col md:flex-row gap-4">
                                 <div className="flex-1 p-4 glass rounded-2xl border-white/5">
-                                    <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest mb-1">Forecast</p>
+                                    <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest mb-1">Total Forecast</p>
                                     <div className="flex items-baseline gap-2">
                                         <span className="text-2xl font-black text-white">₹{insights?.predictedNextMonthExpense ? insights.predictedNextMonthExpense.toLocaleString('en-IN') : '0'}</span>
                                         <span className="text-xs text-slate-400">Next Month Est.</span>
                                     </div>
+                                    <p className="text-[10px] text-slate-500 mt-2 font-medium italic border-t border-white/5 pt-2">Combined anticipated spending across all tracking categories.</p>
                                 </div>
                                 <div className="flex-1 p-4 glass rounded-2xl border-white/5">
                                     <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest mb-1">Status</p>

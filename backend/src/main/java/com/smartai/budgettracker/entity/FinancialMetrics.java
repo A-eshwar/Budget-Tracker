@@ -2,6 +2,8 @@ package com.smartai.budgettracker.entity;
 
 import jakarta.persistence.*;
 import java.math.BigDecimal;
+import java.util.Map;
+import java.util.HashMap;
 
 @Entity
 @Table(name = "financial_metrics")
@@ -21,6 +23,9 @@ public class FinancialMetrics {
     @Column(columnDefinition = "TEXT")
     private String recommendations;
 
+    @Transient
+    private Map<String, BigDecimal> categoryForecasts = new HashMap<>();
+
     public FinancialMetrics() {}
 
     public Long getId() { return id; }
@@ -35,4 +40,6 @@ public class FinancialMetrics {
     public void setPredictedNextMonthExpense(BigDecimal predictedNextMonthExpense) { this.predictedNextMonthExpense = predictedNextMonthExpense; }
     public String getRecommendations() { return recommendations; }
     public void setRecommendations(String recommendations) { this.recommendations = recommendations; }
+    public Map<String, BigDecimal> getCategoryForecasts() { return categoryForecasts; }
+    public void setCategoryForecasts(Map<String, BigDecimal> categoryForecasts) { this.categoryForecasts = categoryForecasts; }
 }

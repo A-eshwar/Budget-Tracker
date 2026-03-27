@@ -9,7 +9,9 @@ import com.smartai.budgettracker.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.HashMap;
 import java.util.stream.Collectors;
 
@@ -117,20 +119,24 @@ public class AIInsightService {
             }
 
             BigDecimal totalPredicted = BigDecimal.ZERO;
-            String[] categories = {"Food", "Transport", "Entertainment", "Utilities", "Health", "Shopping"};
+            Map<String, BigDecimal> categoryForecasts = new HashMap<>();
+            String[] categories = {"Food", "Transport", "Entertainment", "Utilities", "Health", "Shopping", "Groceries", "Miscellaneous"};
             for (String cat : categories) {
                 try {
                     Map<String, Object> catPayload = new HashMap<>(payload);
                     catPayload.put("category_name", cat);
                     Map p = mlServiceClient.executeMLPost("/predict-expense", catPayload).block();
                     if (p != null && p.containsKey("predicted_expense")) {
-                        totalPredicted = totalPredicted.add(new BigDecimal(p.get("predicted_expense").toString()));
+                        BigDecimal predictedVal = new BigDecimal(p.get("predicted_expense").toString());
+                        totalPredicted = totalPredicted.add(predictedVal);
+                        categoryForecasts.put(cat, predictedVal);
                     }
                 } catch (Exception e) {
                     // Ignore individual category failures
                 }
             }
             metrics.setPredictedNextMonthExpense(totalPredicted);
+            metrics.setCategoryForecasts(categoryForecasts);
 
             if (rec != null && rec.containsKey("recommendation")) {
                 metrics.setRecommendations(rec.get("recommendation").toString());

@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
 import java.util.stream.Collectors;
 
 @Service
@@ -61,10 +62,15 @@ public class TransactionService {
         // Perform Anomaly Detection via ML Service ONLY for Expenses
         if (transaction.getType() == Transaction.TransactionType.EXPENSE) {
             try {
-                int month = dto.getTransactionDate().getMonthValue();
-                int dayOfWeek = dto.getTransactionDate().getDayOfWeek().getValue() - 1; // 0-6
-                Map result = mlServiceClient.detectAnomaly(dto.getAmount().doubleValue(), month, dayOfWeek).block();
-                if (result != null && (Boolean) result.get("is_anomaly")) {
+                Map<String, Object> payload = new HashMap<>();
+                payload.put("amount", dto.getAmount().doubleValue());
+                payload.put("income", user.getMonthlySalary() != null ? user.getMonthlySalary() : 0.0);
+                payload.put("occupation", user.getOccupation() != null ? user.getOccupation() : "Professional");
+                payload.put("category_name", dto.getCategory());
+                payload.put("age", user.getAge() != null ? user.getAge() : 30);
+                
+                Map result = mlServiceClient.executeMLPost("/detect-anomaly", payload).block();
+                if (result != null && result.containsKey("is_anomaly") && (Boolean) result.get("is_anomaly")) {
                     transaction.setAnomaly(true);
                 }
             } catch (Exception e) {

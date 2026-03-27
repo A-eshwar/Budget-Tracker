@@ -101,7 +101,7 @@ def encode_cat(encoder_name, value, default=0):
     return default
 
 @app.post("/predict-expense")
-async def predict_expense(req: ExpenseRequest):
+def predict_expense(req: ExpenseRequest):
     if not models.get("expense_predictor"):
         raise HTTPException(status_code=500, detail="Model not loaded")
     
@@ -115,7 +115,7 @@ async def predict_expense(req: ExpenseRequest):
     return {"predicted_expense": round(float(prediction), 2)}
 
 @app.post("/detect-anomaly")
-async def detect_anomaly(req: AnomalyRequest):
+def detect_anomaly(req: AnomalyRequest):
     if not models.get("anomaly_detector"):
         raise HTTPException(status_code=500, detail="Model not loaded")
         
@@ -130,7 +130,7 @@ async def detect_anomaly(req: AnomalyRequest):
     return {"is_anomaly": is_anomaly}
 
 @app.post("/health-score")
-async def health_score(req: HealthRequest):
+def health_score(req: HealthRequest):
     if not models.get("health_score"):
         raise HTTPException(status_code=500, detail="Model not loaded")
     
@@ -142,7 +142,7 @@ async def health_score(req: HealthRequest):
     return {"health_score": round(float(prediction), 2)}
 
 @app.post("/savings-efficiency")
-async def savings_efficiency(req: SavingsRequest):
+def savings_efficiency(req: SavingsRequest):
     if not models.get("savings_efficiency"):
         raise HTTPException(status_code=500, detail="Model not loaded")
     
@@ -152,7 +152,7 @@ async def savings_efficiency(req: SavingsRequest):
     return {"savings_efficiency": round(float(prediction), 2)}
 
 @app.post("/recommendations")
-async def recommendations(req: ExpenseRequest):
+def recommendations(req: ExpenseRequest):
     if not models.get("recommendation"):
         raise HTTPException(status_code=500, detail="Model not loaded")
         
@@ -167,7 +167,7 @@ async def recommendations(req: ExpenseRequest):
     return {"recommendation": rec}
 
 @app.post("/overspending-alert")
-async def overspending_alert(req: OverspendRequest):
+def overspending_alert(req: OverspendRequest):
     if not models.get("overspending_alert"):
         raise HTTPException(status_code=500, detail="Model not loaded")
     
@@ -181,7 +181,7 @@ async def overspending_alert(req: OverspendRequest):
     return {"will_overspend": bool(prediction == 1)}
 
 @app.post("/train")
-async def train(payload: dict = None):
+def train(payload: dict = None):
     # Triggers full retraining using data.csv
     try:
         train_models()
