@@ -11,6 +11,7 @@ import Transactions from './pages/Transactions';
 import Budgets from './pages/Budgets';
 import Savings from './pages/Savings';
 import Profile from './pages/Profile';
+import AIAssistant from './pages/AIAssistant';
 
 const ProtectedRoute = ({ children, requireProfileSetup = true }) => {
   const { user } = useAuth();
@@ -38,6 +39,7 @@ function App() {
           <Route path="/transactions" element={<ProtectedRoute><Transactions /></ProtectedRoute>} />
           <Route path="/budgets" element={<ProtectedRoute><Budgets /></ProtectedRoute>} />
           <Route path="/savings" element={<ProtectedRoute><Savings /></ProtectedRoute>} />
+          <Route path="/assistant" element={<ProtectedRoute><AIAssistant /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
         </Routes>
       </Router>

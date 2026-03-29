@@ -12,7 +12,7 @@ import {
 import {
     TrendingUp, AlertTriangle, Lightbulb,
     ArrowUpRight, ArrowDownRight, Activity,
-    PlusCircle, Wallet, ArrowRight, PiggyBank, X
+    PlusCircle, Wallet, ArrowRight, PiggyBank, X, Clock
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -24,6 +24,25 @@ const Dashboard = () => {
     const [alerts, setAlerts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedCategory, setSelectedCategory] = useState('Food');
+
+    const formatTimestamp = (dateString, isFull = false) => {
+        if (!dateString) return '';
+        const date = new Date(dateString);
+        if (isFull) {
+            return date.toLocaleString('en-IN', {
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true
+            });
+        }
+        return date.toLocaleTimeString('en-IN', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+        });
+    };
 
     useEffect(() => {
         fetchData();
@@ -380,10 +399,10 @@ const Dashboard = () => {
                                 </div>
                                 <h2 className="text-xl font-bold text-white">Security Alerts</h2>
                             </div>
-                            <div className="space-y-4">
+                            <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                                 {transactions.filter(t => t.anomaly).length > 0 || alerts.length > 0 ? (
                                     <>
-                                        {alerts.slice(0, 3).map((a, i) => (
+                                        {alerts.map((a, i) => (
                                             <div key={`alert-${i}`} className="p-4 bg-orange-500/10 border border-orange-500/20 rounded-2xl relative">
                                                 <button onClick={async () => {
                                                     await alertService.markAsRead(a.id);
@@ -391,18 +410,30 @@ const Dashboard = () => {
                                                 }} className="absolute top-2 right-2 text-slate-400 hover:text-white p-1">
                                                     <X className="w-3 h-3" />
                                                 </button>
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <AlertTriangle className="w-3 h-3 text-orange-500" />
-                                                    <p className="text-orange-100 text-[10px] font-black uppercase tracking-widest">Budget Warning</p>
+                                                <div className="flex justify-between items-start mb-1">
+                                                    <div className="flex items-center gap-2">
+                                                        <AlertTriangle className="w-3 h-3 text-orange-500" />
+                                                        <p className="text-orange-100 text-[10px] font-black uppercase tracking-widest">Budget Warning</p>
+                                                    </div>
+                                                    <div className="flex items-center gap-1 text-[9px] text-orange-500/60 font-bold">
+                                                        <Clock className="w-2.5 h-2.5" />
+                                                        {formatTimestamp(a.createdAt, true)}
+                                                    </div>
                                                 </div>
                                                 <p className="text-orange-100/80 text-sm font-medium">{a.message}</p>
                                             </div>
                                         ))}
-                                        {transactions.filter(t => t.anomaly).slice(0, 3).map((t, i) => (
+                                        {transactions.filter(t => t.anomaly).map((t, i) => (
                                             <div key={`anomaly-${i}`} className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl">
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <TrendingUp className="w-3 h-3 text-rose-500" />
-                                                    <p className="text-rose-100 text-[10px] font-black uppercase tracking-widest">Anomaly</p>
+                                                <div className="flex justify-between items-start mb-1">
+                                                    <div className="flex items-center gap-2">
+                                                        <TrendingUp className="w-3 h-3 text-rose-500" />
+                                                        <p className="text-rose-100 text-[10px] font-black uppercase tracking-widest">Anomaly</p>
+                                                    </div>
+                                                    <div className="flex items-center gap-1 text-[9px] text-rose-500/60 font-bold">
+                                                        <Clock className="w-2.5 h-2.5" />
+                                                        {new Date(t.transactionDate).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })}
+                                                    </div>
                                                 </div>
                                                 <p className="text-rose-100/80 text-sm font-medium">Unusual ₹{t.amount} in {t.category}</p>
                                             </div>

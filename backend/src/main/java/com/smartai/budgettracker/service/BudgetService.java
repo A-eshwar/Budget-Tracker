@@ -9,6 +9,7 @@ import com.smartai.budgettracker.repository.DefaultBudgetRepository;
 import com.smartai.budgettracker.entity.DefaultBudget;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -126,5 +127,33 @@ public class BudgetService {
         }
         
         budgetRepository.delete(budget);
+    }
+
+    @Transactional
+    public void deleteBudgetsByYear(Long userId, int year) {
+        budgetRepository.deleteByUserIdAndYear(userId, year);
+    }
+
+    @Transactional
+    public void deleteBudgetsByMonth(Long userId, int month, int year) {
+        budgetRepository.deleteByUserIdAndMonthAndYear(userId, month, year);
+    }
+
+    @Transactional
+    public void deleteBudgetsByCategoryAndYear(Long userId, String category, int year) {
+        budgetRepository.deleteByUserIdAndCategoryAndYear(userId, category, year);
+    }
+
+    @Transactional
+    public void deletePermanentBudget(Long userId, String category, int year) {
+        // Delete ALL overrides for this category across all years/months
+        budgetRepository.deleteByUserIdAndCategory(userId, category);
+        // Delete the default/global target for this category
+        defaultBudgetRepository.deleteByUserIdAndCategory(userId, category);
+    }
+
+    @Transactional
+    public void deleteDefaultBudgetByCategory(Long userId, String category) {
+        defaultBudgetRepository.deleteByUserIdAndCategory(userId, category);
     }
 }

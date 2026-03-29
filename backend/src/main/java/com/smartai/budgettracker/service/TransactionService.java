@@ -51,6 +51,10 @@ public class TransactionService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
+        if (dto.getAmount().compareTo(java.math.BigDecimal.ZERO) <= 0) {
+            throw new RuntimeException("Transaction amount must be greater than zero.");
+        }
+
         Transaction transaction = new Transaction();
         transaction.setUser(user);
         transaction.setAmount(dto.getAmount());
@@ -109,6 +113,10 @@ public class TransactionService {
         
         if (!transaction.getUser().getId().equals(userId)) {
             throw new RuntimeException("Unauthorized");
+        }
+
+        if (dto.getAmount().compareTo(java.math.BigDecimal.ZERO) <= 0) {
+            throw new RuntimeException("Transaction amount must be greater than zero.");
         }
 
         transaction.setAmount(dto.getAmount());

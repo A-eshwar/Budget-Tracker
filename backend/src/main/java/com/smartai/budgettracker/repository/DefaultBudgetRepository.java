@@ -10,4 +10,5 @@ import java.util.Optional;
 public interface DefaultBudgetRepository extends JpaRepository<DefaultBudget, Long> {
     List<DefaultBudget> findByUserId(Long userId);
     Optional<DefaultBudget> findByUserIdAndCategory(Long userId, String category);
+    void deleteByUserIdAndCategory(Long userId, String category);
 }

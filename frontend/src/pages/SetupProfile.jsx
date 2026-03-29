@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { User, DollarSign, Plus, Trash2, AlertCircle } from 'lucide-react';
+import { User, Plus, Trash2, AlertCircle } from 'lucide-react';
 
 const SetupProfile = () => {
     const [monthlySalary, setMonthlySalary] = useState('');
@@ -96,7 +96,7 @@ const SetupProfile = () => {
                     <div>
                         <label className="block text-sm font-medium text-slate-300 mb-2">Monthly Salary</label>
                         <div className="relative">
-                            <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold text-lg">₹</span>
                             <input
                                 type="number"
                                 required
@@ -191,7 +191,7 @@ const SetupProfile = () => {
                                 </select>
                             </div>
                             <div className="md:col-span-5 relative">
-                                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-bold">₹</span>
                                 <input
                                     type="number"
                                     min="0"
@@ -219,7 +219,7 @@ const SetupProfile = () => {
                                     <div key={i} className="flex justify-between items-center bg-slate-800/50 p-3 rounded-xl border border-white/5">
                                         <div className="flex flex-col">
                                             <span className="text-white font-medium">{b.category}</span>
-                                            <span className="text-emerald-400 text-sm font-bold">${b.amount.toFixed(2)} / month</span>
+                                            <span className="text-emerald-400 text-sm font-bold">₹{b.amount.toFixed(2)} / month</span>
                                         </div>
                                         <button 
                                             type="button" 

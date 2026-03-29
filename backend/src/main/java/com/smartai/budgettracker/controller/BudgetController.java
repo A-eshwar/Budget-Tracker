@@ -51,4 +51,46 @@ public class BudgetController {
         budgetService.deleteBudget(userDetails.getId(), id);
         return ResponseEntity.ok("Budget override deleted successfully.");
     }
+
+    @DeleteMapping("/year/{year}")
+    public ResponseEntity<?> deleteYearBudget(
+            @AuthenticationPrincipal UserDetailsImpl userDetails,
+            @PathVariable int year) {
+        budgetService.deleteBudgetsByYear(userDetails.getId(), year);
+        return ResponseEntity.ok("All budget overrides for year " + year + " deleted successfully.");
+    }
+
+    @DeleteMapping("/month/{month}/{year}")
+    public ResponseEntity<?> deleteMonthBudget(
+            @AuthenticationPrincipal UserDetailsImpl userDetails,
+            @PathVariable int month,
+            @PathVariable int year) {
+        budgetService.deleteBudgetsByMonth(userDetails.getId(), month, year);
+        return ResponseEntity.ok("All budget overrides for " + month + "/" + year + " deleted successfully.");
+    }
+    @DeleteMapping("/permanent/{category}/{year}")
+    public ResponseEntity<?> deletePermanentBudget(
+            @AuthenticationPrincipal UserDetailsImpl userDetails,
+            @PathVariable String category,
+            @PathVariable int year) {
+        budgetService.deletePermanentBudget(userDetails.getId(), category, year);
+        return ResponseEntity.ok("Permanent budget for " + category + " including all regional overrides deleted successfully.");
+    }
+
+    @DeleteMapping("/category-year/{category}/{year}")
+    public ResponseEntity<?> deleteCategoryYearBudget(
+            @AuthenticationPrincipal UserDetailsImpl userDetails,
+            @PathVariable String category,
+            @PathVariable int year) {
+        budgetService.deleteBudgetsByCategoryAndYear(userDetails.getId(), category, year);
+        return ResponseEntity.ok("All budget overrides for " + category + " in year " + year + " deleted successfully.");
+    }
+
+    @DeleteMapping("/default/{category}")
+    public ResponseEntity<?> deleteDefaultBudget(
+            @AuthenticationPrincipal UserDetailsImpl userDetails,
+            @PathVariable String category) {
+        budgetService.deleteDefaultBudgetByCategory(userDetails.getId(), category);
+        return ResponseEntity.ok("Default budget for " + category + " deleted successfully.");
+    }
 }

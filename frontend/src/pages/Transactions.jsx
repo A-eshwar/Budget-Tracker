@@ -67,6 +67,11 @@ const Transactions = () => {
             }
         }
 
+        if (Number(formData.amount) <= 0) {
+            setErrorMsg("Transaction amount must be greater than zero.");
+            return;
+        }
+
         if (formData.type === 'EXPENSE' && Number(formData.amount) > effectiveBalance) {
             setErrorMsg(`Not enough balance. Cannot add transaction. Available balance: ₹${effectiveBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`);
             return;
