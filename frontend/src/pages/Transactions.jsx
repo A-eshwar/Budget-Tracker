@@ -248,8 +248,7 @@ const Transactions = () => {
                             </div>
                         </div>
                         <p className="text-slate-300 text-sm mb-6 leading-relaxed">
-                            This transaction will push you over your target monthly budget of <strong className="text-white">₹{budgetWarning.limit}</strong>. 
-                            A security alert will be posted to your Dashboard if you proceed.
+                            alert u have excedded your budget ₹{budgetWarning.limit}
                         </p>
                         <div className="flex justify-end gap-3">
                             <button 

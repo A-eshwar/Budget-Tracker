@@ -9,7 +9,7 @@ All models are trained dynamically using your `data.csv` history inside `train_m
 ## 1. Expense Predictor
 - **Algorithm:** Random Forest Regressor
 - **Architecture/Hyperparameters:** `n_estimators=20` (20 parallel trees), `max_depth=10`
-- **Inputs:** `Income`, `Age`, `Dependents`, `Occupation (Categorical)`, `City Tier (Categorical)`, `Category (Categorical)`
+- **Inputs:** `Income`, `Age`, `Dependents`, `Occupation (Categorical)`, `City Tier (Categorical)`, `Category (Categorical)`    
 - **Output:** Predicted future monthly expense (Continuous Float, e.g., ₹4500.50).
 - **Working & Accuracy:** Random Forests build multiple uncorrelated decision trees and average their predictions, preventing overfitting. It operates with high variance accuracy because it factors in your exact demographic tier.
 - **Web App Usage:** Used in the Dashboard's **"Forecast"** panel. The Java backend loops through 6 predefined categories (Food, Transport, Utilities, etc.) and sums up the Regressor's output for each, presenting you with a single "Next Month Est." figure.

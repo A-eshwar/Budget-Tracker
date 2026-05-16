@@ -12,6 +12,7 @@ import Budgets from './pages/Budgets';
 import Savings from './pages/Savings';
 import Profile from './pages/Profile';
 import AIAssistant from './pages/AIAssistant';
+import Landing from './pages/Landing';
 
 const ProtectedRoute = ({ children, requireProfileSetup = true }) => {
   const { user } = useAuth();
@@ -22,7 +23,7 @@ const ProtectedRoute = ({ children, requireProfileSetup = true }) => {
 
 const PublicRoute = ({ children }) => {
   const { user } = useAuth();
-  if (user) return <Navigate to="/" />;
+  if (user) return <Navigate to="/dashboard" />;
   return <Layout>{children}</Layout>;
 };
 
@@ -32,10 +33,11 @@ function App() {
       <AuthProvider>
         <Router>
           <Routes>
+          <Route path="/" element={<PublicRoute><Landing /></PublicRoute>} />
           <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
           <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
           <Route path="/setup-profile" element={<ProtectedRoute requireProfileSetup={false}><SetupProfile /></ProtectedRoute>} />
-          <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/transactions" element={<ProtectedRoute><Transactions /></ProtectedRoute>} />
           <Route path="/budgets" element={<ProtectedRoute><Budgets /></ProtectedRoute>} />
           <Route path="/savings" element={<ProtectedRoute><Savings /></ProtectedRoute>} />

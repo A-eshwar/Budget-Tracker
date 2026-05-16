@@ -177,7 +177,7 @@ public class TransactionService {
                 Alert alert = new Alert();
                 alert.setUser(user);
                 alert.setType("BUDGET_EXCEEDED");
-                alert.setMessage("You have exceeded your budget of ₹" + limit + " for " + category + " in month " + month + ".");
+                alert.setMessage("alert u have excedded your budget ₹" + limit);
                 alertRepository.save(alert);
             } else {
                 System.out.println("Budget NOT exceeded.");

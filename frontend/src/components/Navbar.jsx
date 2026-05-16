@@ -16,14 +16,14 @@ const Navbar = () => {
 
     return (
         <nav className="fixed top-0 left-0 right-0 h-16 glass flex items-center justify-between px-8 z-50">
-            <Link to="/" className="flex items-center gap-2">
+            <Link to={user ? "/dashboard" : "/"} className="flex items-center gap-2">
                 <TrendingUp className="text-sky-500 w-8 h-8" />
                 <span className="text-xl font-bold gradient-text">SmartBudget AI</span>
             </Link>
 
             {user && (
                 <div className="flex items-center gap-8">
-                    <Link to="/" className="flex items-center gap-2 text-slate-300 hover:text-white transition-colors">
+                    <Link to="/dashboard" className="flex items-center gap-2 text-slate-300 hover:text-white transition-colors">
                         <LayoutDashboard className="w-5 h-5" />
                         <span>Dashboard</span>
                     </Link>
